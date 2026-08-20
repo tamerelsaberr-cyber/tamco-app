@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+/.pnpm-store
+
+# Next.js build output
+.next/
+out/
+
+# Vercel
+.vercel
+
+# Environment variables
+.env*.local
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
