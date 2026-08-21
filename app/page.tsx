@@ -1,11 +1,11 @@
+
 'use client';
 import { useEffect } from 'react';
 
 export default function Home() {
   useEffect(() => {
-    // تهيئة كود Pi SDK فور فتح الصفحة
-    if (typeof window !== 'undefined' && (window as any).Pi) {
-      (window as any).Pi.init({ version: "2.0" });
+    if (typeof window !== 'undefined' && window.Pi) {
+      window.Pi.init({ version: "2.0" });
     }
   }, []);
 
@@ -18,7 +18,8 @@ export default function Home() {
       height: '100vh', 
       fontFamily: 'sans-serif' 
     }}>
-      <h1>Pi Developer Portal Connection Successful!</h1>
-      <p>Please press the Start button in Pi Browser to process the transaction.</p>
+      <h1>Pi Connection Successful</h1>
+      <p>Please press start in Pi Browser.</p>
     </div>
   );
+}
