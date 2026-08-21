@@ -7,8 +7,8 @@ import { CategoriesSection } from "@/components/tamco/categories-section";
 import { PromoBanner } from "@/components/tamco/promo-banner";
 import { FeaturedProducts } from "@/components/tamco/featured-products";
 import { ManufacturingSection } from "@/components/tamco/manufacturing-section";
-import { DesignStudioSection } from "@/components/tamco/design-studio-section";
-import { PaymentMethodsSection } from "@/components/tamco/payment-methods-section";
+import { DesignStudioSection } from "@/components/tamco/design-studio";
+import { PaymentMethodsSection } from "@/components/tamco/payment-methods";
 import { ContactSection } from "@/components/tamco/contact-section";
 import { BottomNav } from "@/components/tamco/bottom-nav";
 import { CartModal } from "@/components/tamco/cart-modal";
@@ -24,22 +24,56 @@ export default function HomePage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-const handlePiPayment = () => {
-    if (typeof window !== "undefined" && (window as any).Pi) {
+
+  const handlePiPayment = () => {
+    if (!(window as any).Pi) {
+      return alert("الرجاء فتح التطبيق من داخل محاكي باي الرسمي (Pi Browser)");
+    }
+
+    try {
       (window as any).Pi.createPayment({
         amount: 0.1,
         memo: "تجربة دفع من واجهة تامو الرئيسية",
         metadata: { orderId: "999" }
       }, {
-        onReadyForServerApproval: (paymentId: string) => console.log("Approved:", paymentId),
-        onReadyForServerCompletion: (paymentId: string, txid: string) => alert("🎯 تم الدفع بنجاح!"),
-        onCancel: () => console.log("Cancelled"),
-        onError: (err: any) => console.log("Error:", err)
+        onReadyForServerApproval: async (paymentId: string) => {
+          const response = await fetch('/api/pi-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, action: 'approve' })
+          });
+
+          if (response.ok) {
+            (window as any).Pi.approvePayment(paymentId);
+          } else {
+            console.error("فشلت موافقة السيرفر الداخلي");
+          }
+        },
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          const response = await fetch('/api/pi-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid, action: 'complete' })
+          });
+
+          if (response.ok) {
+            alert("تم توثيق واكتمال المعاملة بنجاح!");
+          } else {
+            alert("فشل التوثيق النهائي على السيرفر");
+          }
+        },
+        onCancel: (paymentId: string) => {
+          console.log("Cancelled paymentId:", paymentId);
+        },
+        onError: (error: Error, paymentId?: string) => {
+          console.error("Error:", error, paymentId);
+        }
       });
-    } else {
-      alert("يرجى فتح التطبيق من داخل محاكي باى الرسمي");
+    } catch (error) {
+      console.error(error);
     }
   };
+
   const handleAddToCart = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === product.id);
@@ -65,45 +99,44 @@ const handlePiPayment = () => {
   const cartCount = cartItems.reduce((sum, i) => sum + i.qty, 0);
 
   return (
-    <div className="min-h-screen bg-background max-w-md mx-auto" dir="rtl">
-      <Header
-        cartCount={cartCount}
-        onCartClick={() => setCartOpen(true)}
-      />
-
+    <div className="min-h-screen bg-background max-w-md mx-auto" style={{ direction: "rtl" }}>
+      <Header cartCount={cartCount} onCartClick={() => setCartOpen(true)} />
+      
       <main>
         <HeroSection />
         <CategoriesSection />
         <PromoBanner />
-        <FeaturedProducts
-          onAddToCart={handleAddToCart}
-          onProductClick={setSelectedProduct}
+        <FeaturedProducts 
+          onAddToCart={handleAddToCart} 
+          onProductClick={(p) => setSelectedProduct(p)} 
         />
         <ManufacturingSection />
         <DesignStudioSection />
         <PaymentMethodsSection />
         <ContactSection />
       </main>
-<button 
-          onClick={handlePiPayment}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[9999] py-4 px-8 bg-purple-600 hover:purple-700 text-white font-bold rounded-full shadow-2x1 transition-all border-2 border-white text-lg"
-        >
-          💳 تجربة محفظة Pi
-        </button>
-      <BottomNav active={activeTab} onTabChange={setActiveTab} />
 
-      <CartModal
-        isOpen={cartOpen}
-        items={cartItems}
-        onClose={() => setCartOpen(false)}
-        onUpdateQty={handleUpdateQty}
-        onRemove={handleRemove}
+      <button 
+        onClick={handlePiPayment} 
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] py-2 px-4 bg-yellow-500 text-black rounded font-bold"
+      >
+        تجربة محفظة Pi
+      </button>
+
+      <BottomNav active={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
+
+      <CartModal 
+        isOpen={cartOpen} 
+        items={cartItems} 
+        onClose={() => setCartOpen(false)} 
+        onUpdateQty={handleUpdateQty} 
+        onRemove={handleRemove} 
       />
 
-      <ProductDetailModal
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={handleAddToCart}
+      <ProductDetailModal 
+        product={selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+        onAddToCart={handleAddToCart} 
       />
     </div>
   );
