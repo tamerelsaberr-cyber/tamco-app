@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // استبدل النص بالأسفل بمفتاح الـ API الخاص بك من منصة مطوري Pi
-const PI_API_KEY = "YOUR_PI_API_KEY_HERE"; 
+const PI_API_KEY = "msxgjwjmovbkxzyrzglm9yepwwmmurbiaap4bvruwiofxlbesqbk8t5ywvangqqz"; 
 
 export async function POST(request: Request) {
   try {
