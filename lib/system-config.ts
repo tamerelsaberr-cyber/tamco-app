@@ -9,6 +9,7 @@ export const PI_NETWORK_CONFIG = {
   SDK_VERSION: 'v2',
   // توكن افتراضي للاختبار في بيئة التطوير المذكورة بالمستندات لـ testing rings
   SANDBOX_TOKEN: 'pi_test_token_override_privileges_master',
+sandbox: true
 };
 
 // 2. واجهة البيانات الخاصة بالتحكم الكلي للأدمن (Master Control Interface Type)
