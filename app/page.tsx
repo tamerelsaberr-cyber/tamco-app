@@ -4,14 +4,25 @@ import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [status, setStatus] = useState("...جاري التوصيل بالشبكة");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // التأكد من تحميل مكتبة Pi من الـ layout
     if (typeof window !== 'undefined' && window.Pi) {
       try {
-        // تهيئة الـ SDK مع تفعيل وضع التجربة التجريبي Sandbox
+        // تهيئة الـ SDK مع وضع التجربة
         window.Pi.init({ version: "2.0", sandbox: true });
-        setStatus("متصل بشبكة Pi بنجاح! جاهز للتجربة");
+        
+        // طلب الصلاحيات والمصادقة فوراً لتفعيل ميزة الدفع
+        window.Pi.authenticate(['username', 'payments'], onIncompletePaymentFound)
+          .then((auth) => {
+            console.log("تمت المصادقة بنجاح للمستخدم: ", auth.user.username);
+            setStatus(`متصل بحساب: ${auth.user.username} | جاهز للدفع التجريبي`);
+            setIsAuthenticated(true);
+          })
+          .catch((error) => {
+            setStatus("فشل منح صلاحية الدفع: " + error.message);
+          });
+
       } catch (err: any) {
         setStatus("خطأ في تهيئة المحفظة: " + err.message);
       }
@@ -20,9 +31,18 @@ export default function Home() {
     }
   }, []);
 
+  // دالة إلزامية من شبكة Pi للتعامل مع أي مدفوعات معلقة قديمة لم تكتمل
+  function onIncompletePaymentFound(payment: any) {
+    console.log("تم العثور على معاملة معلقة:", payment);
+  }
+
   const handleTestPayment = async () => {
     if (!window.Pi) {
       return alert("الرجاء تشغيل التطبيق من متصفح Pi Browser الرسمي لإجراء الدفع.");
+    }
+
+    if (!isAuthenticated) {
+      return alert("لم يتم منح صلاحيات الدفع بعد، يرجى إعادة تحميل الصفحة.");
     }
 
     setStatus("...جاري إنشاء معاملة تجريبية");
@@ -53,9 +73,9 @@ export default function Home() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '20px', fontFamily: 'sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '20px', fontFamily: 'sans-serif', padding: '20px', textAlign: 'center' }}>
       <h1 style={{ color: '#5b21b6' }}>بوابة توثيق تطبيق Pi</h1>
-      <p style={{ fontSize: '18px', fontWeight: 'bold' }}>{status}</p>
+      <p style={{ fontSize: '18px', fontWeight: 'bold', maxWidth: '90%' }}>{status}</p>
       
       <button 
         onClick={handleTestPayment} 
