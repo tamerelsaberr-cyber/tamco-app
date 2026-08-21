@@ -1,31 +1,37 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
-  const [status, setStatus] = useState("جاري تجهيز الاتصال...");
+  const [status, setStatus] = useState("...جاري التوصيل بالشبكة");
 
   useEffect(() => {
+    // التأكد من تحميل مكتبة Pi من الـ layout
     if (typeof window !== 'undefined' && window.Pi) {
       try {
-        window.Pi.init({ version: "2.0" });
-        setStatus("متصل بشبكة Pi بنجاح! جاهز للتجربة.");
-      } catch (err) {
-        setStatus("خطأ في تهيئة الشبكة: " + err.message);
+        // تهيئة الـ SDK مع تفعيل وضع التجربة التجريبي Sandbox
+        window.Pi.init({ version: "2.0", sandbox: true });
+        setStatus("متصل بشبكة Pi بنجاح! جاهز للتجربة");
+      } catch (err: any) {
+        setStatus("خطأ في تهيئة المحفظة: " + err.message);
       }
     } else {
-      setStatus("من فضلك افتح الصفحة من داخل Pi Browser حصرًا.");
+      setStatus("الرجاء تشغيل التطبيق من متصفح Pi Browser الرسمي ليتفعل الاتصال.");
     }
   }, []);
 
   const handleTestPayment = async () => {
-    if (!window.Pi) return alert("الرجاء تشغيل التطبيق من متصفح Pi");
+    if (!window.Pi) {
+      return alert("الرجاء تشغيل التطبيق من متصفح Pi Browser الرسمي لإجراء الدفع.");
+    }
+
+    setStatus("...جاري إنشاء معاملة تجريبية");
     
-    setStatus("جاري إنشاء معاملة تجريبية...");
     try {
-      const payment = await window.Pi.createPayment({
+      await window.Pi.createPayment({
         amount: 1,
-        memo: "Test Payment for Validation",
-        metadata: { orderId: "validation-123" },
+        memo: "Test Validation Payment",
+        metadata: { orderId: "val-999" },
         uid: "test-user-uid"
       }, {
         onReadyForServerApproval: (paymentId) => {
@@ -34,24 +40,27 @@ export default function Home() {
         onReadyForServerCompletion: (paymentId, txid) => {
           setStatus("اكتملت المعاملة بنجاح! كود المعاملة: " + txid);
         },
-        onCancel: (paymentId) => {
-          setStatus("تم إلغاء المعاملة من قِبلك.");
+        onCancel: () => {
+          setStatus("تم إلغاء المعاملة.");
         },
-        onError: (error, payment) => {
+        onError: (error) => {
           setStatus("حدث خطأ أثناء الدفع: " + error.message);
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       setStatus("فشل بدء المعاملة: " + error.message);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', padding: '20px', textAlign: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '20px', fontFamily: 'sans-serif' }}>
       <h1 style={{ color: '#5b21b6' }}>بوابة توثيق تطبيق Pi</h1>
       <p style={{ fontSize: '18px', fontWeight: 'bold' }}>{status}</p>
       
-      <button onClick={handleTestPayment} style={{ marginTop: '20px', padding: '15px 30px', fontSize: '18px', color: '#fff', backgroundColor: '#eab308', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+      <button 
+        onClick={handleTestPayment} 
+        style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#5b21b6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold' }}
+      >
         اضغط هنا لإجراء دفع تجريبي (1 Pi)
       </button>
     </div>
