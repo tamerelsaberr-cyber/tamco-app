@@ -7,8 +7,8 @@ import { CategoriesSection } from "@/components/tamco/categories-section";
 import { PromoBanner } from "@/components/tamco/promo-banner";
 import { FeaturedProducts } from "@/components/tamco/featured-products";
 import { ManufacturingSection } from "@/components/tamco/manufacturing-section";
-import { DesignStudioSection } from "@/components/tamco/design-studio";
-import { PaymentMethodsSection } from "@/components/tamco/payment-methods";
+import { DesignStudioSection } from "@/components/tamco/design-studio-section";
+import { PaymentMethodsSection } from "@/components/tamco/payment-methods-section";
 import { ContactSection } from "@/components/tamco/contact-section";
 import { BottomNav } from "@/components/tamco/bottom-nav";
 import { CartModal } from "@/components/tamco/cart-modal";
@@ -25,22 +25,43 @@ export default function HomePage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const handlePiPayment = () => {
-    if (!(window as any).Pi) {
-      return alert("الرجاء فتح التطبيق من داخل محاكي باي الرسمي (Pi Browser)");
+  // دالة الدفع والتوثيق المعدلة والمحمية لشبكة Pi
+  const handlePiPayment = async () => {
+    if (typeof window === "undefined" || !(window as any).Pi) {
+      return alert("الرجاء فتح التطبيق من داخل محاكي باي الرسمي");
     }
 
     try {
+      // 1. طلب تسجيل الدخول وطلب صلاحيات الدفع المفقودة سابقاً
+      const scopes = ["username", "payments"];
+      
+      // دالة لتنظيف وإغلاق أي دفع معلق قديم تلقائياً
+      const onIncompletePaymentFound = async (payment: any) => {
+        await fetch("/api/pi-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            paymentId: payment.identifier, 
+            txid: payment.transaction.txid, 
+            action: "complete" 
+          })
+        });
+      };
+
+      // تنفيذ التوثيق
+      await (window as any).Pi.authenticate(scopes, onIncompletePaymentFound);
+
+      // 2. بدء عملية الدفع التجريبي (1 باي للخطوة العاشرة)
       (window as any).Pi.createPayment({
-        amount: 0.1,
-        memo: "تجربة دفع من واجهة تامو الرئيسية",
-        metadata: { orderId: "999" }
+        amount: 1,
+        memo: "تجربة دفع من واجهة تامكو الرئيسية لتفعيل الخطوة العاشرة",
+        metadata: { orderId: "10" },
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
-          const response = await fetch('/api/pi-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, action: 'approve' })
+          const response = await fetch("/api/pi-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId, action: "approve" })
           });
 
           if (response.ok) {
@@ -50,27 +71,28 @@ export default function HomePage() {
           }
         },
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          const response = await fetch('/api/pi-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid, action: 'complete' })
+          const response = await fetch("/api/pi-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId, txid, action: "complete" })
           });
 
           if (response.ok) {
-            alert("تم توثيق واكتمال المعاملة بنجاح!");
+            alert("تم توثيق واكتمال المعاملة بنجاح! مبروك");
           } else {
             alert("فشل التوثيق النهائي على السيرفر");
           }
         },
         onCancel: (paymentId: string) => {
-          console.log("Cancelled paymentId:", paymentId);
+          console.log("Cancelled paymentID:", paymentId);
         },
-        onError: (error: Error, paymentId?: string) => {
+        onError: (error: Error, paymentId: string) => {
           console.error("Error:", error, paymentId);
         }
       });
+
     } catch (error) {
-      console.error(error);
+      console.error("Payment initialization failed:", error);
     }
   };
 
@@ -78,7 +100,7 @@ export default function HomePage() {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       if (existing) {
-        return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
       }
       return [...prev, { ...product, qty: 1 }];
     });
@@ -87,7 +109,7 @@ export default function HomePage() {
   const handleUpdateQty = (id: number, delta: number) => {
     setCartItems((prev) =>
       prev
-        .map((i) => i.id === id ? { ...i, qty: i.qty + delta } : i)
+        .map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i))
         .filter((i) => i.qty > 0)
     );
   };
@@ -99,7 +121,7 @@ export default function HomePage() {
   const cartCount = cartItems.reduce((sum, i) => sum + i.qty, 0);
 
   return (
-    <div className="min-h-screen bg-background max-w-md mx-auto" style={{ direction: "rtl" }}>
+    <div className="min-h-screen bg-background max-w-md mx-auto style={{ direction: 'rtl' }}">
       <Header cartCount={cartCount} onCartClick={() => setCartOpen(true)} />
       
       <main>
@@ -116,15 +138,16 @@ export default function HomePage() {
         <ContactSection />
       </main>
 
+      {/* زر الدفع التجريبي الخاص بتوثيق المتصفح */}
       <button 
-        onClick={handlePiPayment} 
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] py-2 px-4 bg-yellow-500 text-black rounded font-bold"
+        onClick={handlePiPayment}
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] bg-purple-700 text-white px-6 py-3 rounded-full shadow-lg font-bold hover:bg-purple-800 transition-colors"
       >
-        تجربة محفظة Pi
+        اضغط هنا لإجراء دفع تجريبي (1 Pi)
       </button>
 
       <BottomNav active={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
-
+      
       <CartModal 
         isOpen={cartOpen} 
         items={cartItems} 
