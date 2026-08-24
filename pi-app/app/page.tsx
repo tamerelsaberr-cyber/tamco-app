@@ -20,9 +20,26 @@ export default function HomePage() {
           metadata: { id: "user_verification_p1" }
         }, {
           onReadyForServerApproval: async (paymentId: string) => {
-            setStatus('جاري إرسال الموافقة التلقائية للمطور...');
-            return paymentId; 
-          },
+    setStatus('...جاري إرسال الموافقة التلقائية للمطور');
+    try {
+        const response = await fetch('/api/pi-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paymentId }),
+        });
+
+        if (!response.ok) {
+            throw new Error('فشلت موافقة السيرفر الداخلي');
+        }
+
+        return paymentId;
+    } catch (error) {
+        console.error("Approval error:", error);
+        setStatus('فشل تأكيد الدفع من السيرفر');
+    }
+},
           onReadyForServerCompletion: async (paymentId: string, txid: string) => {
             setStatus('تم التفعيل والتوثيق بنجاح! جاري التحديث...');
             window.location.reload();
