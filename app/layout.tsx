@@ -1,9 +1,9 @@
-
+import './globals.css';
 import Script from 'next/script';
 
 export const metadata = {
-  title: "Tamco Marketplace",
-  description: "Pi Network Application",
+  title: 'Tamco Marketplace',
+  description: 'Pi Network Application',
 };
 
 export default function RootLayout({
@@ -13,11 +13,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body>
+      <head>
+        {/* 🚀 الـ Script هنا داخل الـ head ليتم تحميله فوراً قبل الواجهة */}
         <Script 
-          src="https://sdk.minepi.com/pi-sdk.js"
+          src="https://minepi.com" 
           strategy="beforeInteractive" 
         />
+      </head>
+      <body>
         {children}
       </body>
     </html>
