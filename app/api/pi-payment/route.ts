@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, paymentId } = body;
     const PI_API_KEY = process.env.PI_API_KEY;
 
+    if (!paymentId || !action) {
+      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    }
+
     if (action === 'approve') {
       const response = await fetch(`https://minepi.com{paymentId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Key ${PI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -30,9 +36,9 @@ export async function POST(request: Request) {
         method: 'POST',
         headers: {
           'Authorization': `Key ${PI_API_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ txid: body.txid })
+        body: JSON.stringify({ txid: body.txid }),
       });
 
       if (!response.ok) {
@@ -46,6 +52,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+
   } catch (error: any) {
     console.error('Server error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
