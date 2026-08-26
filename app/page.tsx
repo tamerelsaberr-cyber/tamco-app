@@ -1,60 +1,79 @@
-
 'use client';
 import React, { useState } from 'react';
 
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('جاهز لبدء عملية التوثيق والترقية');
+  const [status, setStatus] = useState('جاهز لبدء عملية التوثيق والتوقيع');
 
   const handlePiPayment = async () => {
     setLoading(true);
     setStatus('جاري الاتصال بمحفظة Pi...');
-    
+
     try {
       if (typeof window !== 'undefined' && (window as any).Pi) {
         const Pi = (window as any).Pi;
-        
+
+        // 1️⃣ تهيئة مكتبة Pi وتفعيل وضع الفحص التجريبي (Sandbox)
+        Pi.init({ version: "2.0", sandbox: true });
+
         await Pi.createPayment({
-          amount: 1, 
+          amount: 1,
           memo: "توثيق وتفعيل حساب تطبيق Tamco Clean",
-          metadata: { id: "user_verification_p1" }
+          metadata: { id: "user_verification_pi" },
         }, {
           onReadyForServerApproval: async (paymentId: string) => {
-    setStatus('...جاري إرسال الموافقة التلقائية للمطور');
-    try {
-        const response = await fetch('/api/pi-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ paymentId }),
-        });
+            setStatus('جاري إرسال الموافقة التلقائية للمطور...');
+            try {
+              // 2️⃣ تمرير الـ action للموافقة بالسيرفر
+              const response = await fetch('/api/pi-payment', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ paymentId, action: 'approve' }),
+              });
 
-        if (!response.ok) {
-            throw new Error('فشلت موافقة السيرفر الداخلي');
-        }
+              if (!response.ok) {
+                throw new Error('فشلت موافقة السيرفر الداخلي');
+              }
 
-        return paymentId;
-    } catch (error) {
-        console.error("Approval error:", error);
-        setStatus('فشل تأكيد الدفع من السيرفر');
-    }
-},
-          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-            setStatus('تم التفعيل والتوثيق بنجاح! جاري التحديث...');
-            window.location.reload();
+              return paymentId;
+            } catch (error) {
+              console.error("Approval error:", error);
+              setStatus('فشل تأكيد الدفع من السيرفر');
+            }
           },
+
+          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+            setStatus('جاري التفعيل والتوثيق بنجاح! جاري التحديث...');
+            try {
+              // 3️⃣ تمرير الـ action لإنهاء المعاملة بالسيرفر
+              await fetch('/api/pi-payment', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ paymentId, action: 'complete', txid }),
+              });
+              
+              window.location.reload();
+            } catch (error) {
+              console.error("Completion error:", error);
+            }
+          },
+
           onCancel: (paymentId: string) => {
             setStatus('تم إلغاء عملية الدفع من قبل المستخدم');
             setLoading(false);
           },
+
           onError: (error: Error, paymentId?: string) => {
             setStatus('حدث خطأ أثناء المعالجة، يرجى المحاولة لاحقاً');
             setLoading(false);
           }
         });
       } else {
-        setStatus('يرجى فتح الرابط من داخل متصفح تطبيق Pi Browser الفعلي');
+        setStatus('يرجى فتح الرابط من داخل متصفح Pi Browser الخاص بـ Pi Network');
         setLoading(false);
       }
     } catch (err) {
@@ -64,16 +83,16 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif', direction: 'rtl', textAlign: 'center', backgroundColor: '#fff', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '500px', margin: '60px auto', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ color: '#5b21b6', fontSize: '28px', marginBottom: '20px' }}>بوابة توثيق تطبيق Pi</h1>
+    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif', direction: 'rtl', textAlign: 'center' }}>
+      <div style={{ maxWidth: '500px', margin: '60px auto', padding: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: '12px' }}>
+        <h1 style={{ color: '#05b21b', fontSize: '28px', marginBottom: '10px' }}>توثيق حساب تامكو</h1>
         <p style={{ fontSize: '18px', color: '#4b5563', margin: '20px 0' }}>{status}</p>
-        
-        <button 
+
+        <button
           onClick={handlePiPayment}
           disabled={loading}
           style={{
-            backgroundColor: loading ? '#9333ea' : '#6d28d9',
+            backgroundColor: loading ? '#9333ea' : '#4d28d9',
             color: '#fff',
             border: 'none',
             padding: '15px 30px',
@@ -85,7 +104,7 @@ export default function HomePage() {
             transition: '0.3s'
           }}
         >
-          {loading ? '... جاري معالجة التوثيق' : 'اضغط هنا لإجراء دفع تجريبي (1 Pi)'}
+          {loading ? 'جاري معالجة التوثيق...' : 'اضغط هنا لإجراء دفع تجريبي'}
         </button>
       </div>
     </div>
