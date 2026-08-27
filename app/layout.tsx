@@ -14,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
-        {/* 🚀 الـ Script هنا داخل الـ head ليتم تحميله فوراً قبل الواجهة */}
+
         <Script 
           src="https://minepi.com" 
           strategy="beforeInteractive" 
