@@ -25,11 +25,7 @@ export default function HomePage() {
   }, []);
 
   const handlePiPayment = async () => {
-    if (typeof window === 'undefined' || !window.Pi) {
-      setStatus('يرجى فتح الرابط من داخل متصفح Pi Browser الرسمي لشبكة Pi Network');
-      return;
-    }
-
+    
     setLoading(true);
     setStatus('جاري الاتصال بمحفظة Pi...');
 
