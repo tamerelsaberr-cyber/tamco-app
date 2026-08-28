@@ -16,7 +16,7 @@ export default function RootLayout({
       <head>
         {/* رابط مكتبة باى البرمجية الرسمية والضرورية لتفعيل المحفظة والدفع */}
         <Script 
-        src=https://minepi.com
+        src="https://minepi.com"
           strategy="beforeInteractive" 
         />
       </head>
