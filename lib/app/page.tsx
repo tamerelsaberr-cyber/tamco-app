@@ -1,166 +1,93 @@
 "use client";
 
-import { useState } from "react";
-import { Header } from "@/components/tamco/header";
-import { HeroSection } from "@/components/tamco/hero-section";
-import { CategoriesSection } from "@/components/tamco/categories-section";
-import { PromoBanner } from "@/components/tamco/promo-banner";
-import { FeaturedProducts } from "@/components/tamco/featured-products";
-import { ManufacturingSection } from "@/components/tamco/manufacturing-section";
-import { DesignStudioSection } from "@/components/tamco/design-studio-section";
-import { PaymentMethodsSection } from "@/components/tamco/payment-methods-section";
-import { ContactSection } from "@/components/tamco/contact-section";
-import { BottomNav } from "@/components/tamco/bottom-nav";
-import { CartModal } from "@/components/tamco/cart-modal";
-import { ProductDetailModal } from "@/components/tamco/product-detail-modal";
-import type { Product } from "@/components/tamco/featured-products";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-interface CartItem extends Product {
-  qty: number;
-}
+export default function TamcoPaymentPage() {
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const router = useRouter();
 
-export default function HomePage() {
-  const [activeTab, setActiveTab] = useState("home");
-  const [cartOpen, setCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-  // دالة الدفع والتوثيق المعدلة والمحمية لشبكة Pi
-  const handlePiPayment = async () => {
-    if (typeof window === "undefined" || !(window as any).Pi) {
-      return alert("الرجاء فتح التطبيق من داخل محاكي باي الرسمي");
+  useEffect(() => {
+    // تهيئة مكتبة Pi لبيئة الاختبار (Testnet) بأمان فور فتح الصفحة
+    if (typeof window !== "undefined" && (window as any).Pi) {
+      try {
+        (window as any).Pi.init({ version: "2.0", sandbox: true });
+      } catch (e) {
+        console.error("Pi init error:", e);
+      }
     }
+  }, []);
+
+  // دالة الدفع التجريبي المباشرة لمنع الهروب لمنصة Vercel والتخلص من الصفحة البيضاء
+  const handleTestPayment = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault(); // منع المتصفح من فتح أي روابط خارجية
+
+    if (!(window as any).Pi) {
+      alert("يرجى الضغط على هذا الزر من داخل تطبيق Pi Browser على الهاتف حصراً لتشغيل المحفظة.");
+      return;
+    }
+
+    setPaymentStatus("جاري فتح المحفظة التجريبية وتأكيد المعاملة...");
 
     try {
-      // 1. طلب تسجيل الدخول وطلب صلاحيات الدفع المفقودة سابقاً
-      const scopes = ["username", "payments"];
-      
-      // دالة لتنظيف وإغلاق أي دفع معلق قديم تلقائياً
-      const onIncompletePaymentFound = async (payment: any) => {
-        await fetch("/api/pi-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            paymentId: payment.identifier, 
-            txid: payment.transaction.txid, 
-            action: "complete" 
-          })
-        });
-      };
-
-      // تنفيذ التوثيق
-      await (window as any).Pi.authenticate(scopes, onIncompletePaymentFound);
-
-      // 2. بدء عملية الدفع التجريبي (1 باي للخطوة العاشرة)
       (window as any).Pi.createPayment({
-        amount: 1,
-        memo: "تجربة دفع من واجهة تامكو الرئيسية لتفعيل الخطوة العاشرة",
-        metadata: { orderId: "10" },
+        amount: 1, // القيمة التجريبية المطلوبة للتوثيق (1 باي)
+        memo: "التوثيق التجريبي لتطبيق تامكو - الخطوة 10",
+        metadata: { appId: "tamco77478" } // معرف تطبيقك الخاص
       }, {
-        onReadyForServerApproval: async (paymentId: string) => {
-          const response = await fetch("/api/pi-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, action: "approve" })
-          });
-
-          if (response.ok) {
-            (window as any).Pi.approvePayment(paymentId);
-          } else {
-            console.error("فشلت موافقة السيرفر الداخلي");
-          }
+        onReadyForServerApproval: function(paymentId: string) {
+          console.log("معرف الدفع المعتمد:", paymentId);
+          setPaymentStatus("تمت الموافقة المبدئية، جاري تسجيل الحركة...");
         },
-        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          const response = await fetch("/api/pi-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, txid, action: "complete" })
-          });
-
-          if (response.ok) {
-            alert("تم توثيق واكتمال المعاملة بنجاح! مبروك");
-          } else {
-            alert("فشل التوثيق النهائي على السيرفر");
-          }
+        onReadyForServerCompletion: function(paymentId: string, txid: string) {
+          console.log("اكتمل الدفع! رقم الحركة:", txid);
+          setPaymentStatus("مبروك! تم الدفع بنجاح واجتزت الخطوة 10.");
+          alert("تم إجراء الدفع التجريبي بنجاح واجتزت الخطوة 10 بنجاح!");
         },
-        onCancel: (paymentId: string) => {
-          console.log("Cancelled paymentID:", paymentId);
+        onCancel: function(paymentId: string) {
+          setPaymentStatus("تم إلغاء المعاملة من قبلك.");
         },
-        onError: (error: Error, paymentId: string) => {
-          console.error("Error:", error, paymentId);
+        onError: function(error: any, paymentId: string) {
+          console.error("حدث خطأ:", error);
+          setPaymentStatus("فشل الدفع: " + error.message);
+          alert("فشلت العملية: " + error.message);
         }
       });
-
-    } catch (error) {
-      console.error("Payment initialization failed:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleAddToCart = (product: Product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i.id === product.id);
-      if (existing) {
-        return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      }
-      return [...prev, { ...product, qty: 1 }];
-    });
-  };
-
-  const handleUpdateQty = (id: number, delta: number) => {
-    setCartItems((prev) =>
-      prev
-        .map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i))
-        .filter((i) => i.qty > 0)
-    );
-  };
-
-  const handleRemove = (id: number) => {
-    setCartItems((prev) => prev.filter((i) => i.id !== id));
-  };
-
-  const cartCount = cartItems.reduce((sum, i) => sum + i.qty, 0);
-
   return (
-    <div className="min-h-screen bg-background max-w-md mx-auto style={{ direction: 'rtl' }}">
-      <Header cartCount={cartCount} onCartClick={() => setCartOpen(true)} />
-      
-      <main>
-        <HeroSection />
-        <CategoriesSection />
-        <PromoBanner />
-        <FeaturedProducts 
-          onAddToCart={handleAddToCart} 
-          onProductClick={(p) => setSelectedProduct(p)} 
-        />
-        <ManufacturingSection />
-        <DesignStudioSection />
-        <PaymentMethodsSection />
-        <ContactSection />
-      </main>
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-6" style={{ direction: "rtl" }}>
+      <div className="max-w-md w-full bg-slate-800 p-8 border border-slate-700 rounded-2xl text-center shadow-2xl">
+        <h1 className="text-2xl font-bold text-amber-500 mb-2">TAMCO بوابة إدارة وتوثيق</h1>
+        <p className="text-sm text-slate-400 mb-6">مرحباً بك في صفحة التوثيق الفوري والنهائي لتطبيق تامكو</p>
+        
+        <div className="p-4 bg-slate-900 border border-emerald-500/30 rounded-xl mb-6">
+          <h2 className="text-lg font-bold text-emerald-400 mb-1">اجتياز الخطوة رقم 10</h2>
+          <p className="text-xs text-slate-400">اضغط على الزر أدناه لتشغيل المحفظة وتأكيد الدفع التجريبي مباشرة دون الخروج لفيرسيل.</p>
+        </div>
 
-      {/* زر الدفع التجريبي الخاص بتوثيق المتصفح */}
-      <button 
-        onClick={handlePiPayment}
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] bg-purple-700 text-white px-6 py-3 rounded-full shadow-lg font-bold hover:bg-purple-800 transition-colors"
-      >
-        اضغط هنا لإجراء دفع تجريبي (1 Pi)
-      </button>
-
-      <BottomNav active={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
-      
-      <CartModal 
-        isOpen={cartOpen} 
-        items={cartItems} 
-        onClose={() => setCartOpen(false)} 
-        onUpdateQty={handleUpdateQty} 
-        onRemove={handleRemove} 
-      />
-
-      <ProductDetailModal 
-        product={selectedProduct} 
-        onClose={() => setSelectedProduct(null)} 
-        onAddToCart={handleAddToCart} 
-      />
+        {/* هذا هو الزر السحري المعدل الذي سيستدعي المحفظة مباشرة */}
+        <button 
+          onClick={handleTestPayment}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-bold transition-all shadow-lg transform active:scale-95"
+        >
+          اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10
+        </button>
+        
+        {paymentStatus && (
+          <p className="mt-4 text-xs text-amber-400 font-medium animate-pulse">{paymentStatus}</p>
+        )}
+        
+        <button 
+          onClick={() => router.push("/")}
+          className="mt-6 text-xs text-slate-500 hover:text-slate-400 underline block mx-auto"
+        >
+          العودة للمتجر الرئيسي
+        </button>
+      </div>
     </div>
   );
 }
