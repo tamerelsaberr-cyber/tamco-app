@@ -120,3 +120,45 @@ export default function HomePage() {
     </div>
   );
 }
+export function PiPaymentButton() {
+  const handlePayment = async () => {
+    try {
+      if (!window.Pi) {
+        alert("يرجى فتح الموقع من داخل متصفح Pi Browser الرسمي لإتمام العملية");
+        return;
+      }
+      
+      await window.Pi.createPayment({
+        amount: 0.1,
+        memo: "Test Transaction",
+        metadata: { appId: "tamco7478" }
+      }, {
+        onReadyForServerApproval: async (paymentId) => {
+          await fetch('/api/payments', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId }) 
+          });
+        },
+        onReadyForServerCompletion: (paymentId, txid) => {
+          alert("مبروك! اكتملت المعاملة بنجاح وتفعل التوثيق");
+        },
+        onCancel: () => console.log("Cancelled"),
+        onError: (err) => alert("خطأ في الدفع: " + err.message)
+      });
+    } catch (e) {
+      alert("حدث خطأ: " + e.message);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '50px 0' }}>
+      <button 
+        onClick={handlePayment}
+        style={{ padding: '15px 30px', backgroundColor: '#eac024', color: '#000', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+      >
+        اضغط هنا لتأكيد الدفع التجريبي وتفعيل الخطوة 10
+      </button>
+    </div>
+  );
+}
