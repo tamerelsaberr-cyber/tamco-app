@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
+    // 1. معالجة طلب الموافقة (Approve)
     if (action === 'approve') {
       const response = await fetch(`https://minepi.com{paymentId}/approve`, {
         method: 'POST',
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, data });
     }
 
+    // 2. معالجة طلب الاكتمال النهائي (Complete)
     if (action === 'complete') {
       const response = await fetch(`https://minepi.com{paymentId}/complete`, {
         method: 'POST',
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error: any) {
-    console.error('Server error:', error);
+    console.error('Server error (pi-payment):', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
