@@ -39,11 +39,7 @@ export default function HomePage() {
     initPi();
   }, []);
 
-  // دالة بدء عملية الدفع والتصديق المباشرة
-  const handlePiPayment = async () => {
-    if (typeof window === 'undefined' || !window.Pi) {
-      alert("يرجى فتح الموقع من داخل متصفح Pi Browser الرسمي لضمان عمل المحفظة");
-      return;
+ 
     }
 
     setLoading(true);
