@@ -128,21 +128,21 @@ export default function HomePage() {
           </p>
         )}
 
-  <button 
-      onClick={handlePiPayment} 
-      disabled={loading}
-      style={{
-        backgroundColor: loading ? '#aaaaaa' : '#8a2be2',
-        color: 'white',
-        border: 'none',
-        padding: '10px 20px',
-        fontSize: '16px',
-        borderRadius: '8px',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        width: '100%',
-        fontWeight: 'bold',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}
-    >
-      {loading ? "جاري معالجة الدفع والتوثيق..." : "اضغط هنا للدفع وتفعيل التوثيق 10"}
-    </button>
+      <button 
+  onClick={handlePiPayment} 
+  disabled={loading}
+  style={{
+    backgroundColor: loading ? '#aaaaaa' : '#8a2be2',
+    color: 'white',
+    border: 'none',
+    padding: '10px 20px',
+    fontSize: '16px',
+    borderRadius: '8px',
+    cursor: loading ? 'not-allowed' : 'pointer',
+    width: '100%',
+    fontWeight: 'bold',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+  }}
+>
+  {loading ? "...جاري معالجة الدفع والتوثيق" : "اضغط هنا للدفع وتفعيل التوثيق 10"}
+</button> 
