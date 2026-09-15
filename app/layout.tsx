@@ -13,16 +13,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <head>
-        {/* رابط مكتبة باى البرمجية الرسمية والضرورية لتفعيل المحفظة والدفع */}
+      <body>
+        {/* رابط مكتبة باي البرمجية الرسمية والصحيحة لتفعيل المحفظة والدفع */}
         <Script 
-        src="https://minepi.com"
+          src="https://sdk.minepi.com/pi-sdk.js" 
           strategy="beforeInteractive" 
         />
-      </head>
-      <body>
         {children}
       </body>
     </html>
   );
-}
