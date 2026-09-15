@@ -8,17 +8,20 @@ export async function POST(request: Request) {
     const { action, paymentId, txid } = body;
     const PI_API_KEY = process.env.PI_API_KEY;
 
-    // 1. التحقق الصحيح من وجود المفتاح السري
+    // 1. التحقق من وجود المفتاح السري للمطور في السيرفر
     if (!PI_API_KEY) {
-      return NextResponse.json({ error: 'المفتاح السري PI_API_KEY غير معرف في خادم فيرسيل' }, { status: 500 });
+      console.error("خطأ: لم يتم العثور على مفتاح PI_API_KEY في ملف الـ .env");
+      return NextResponse.json({ error: 'المفتاح السري للمطور غير معرف في السيرفر' }, { status: 500 });
     }
 
     if (!paymentId || !action) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    // 2. معالجة طلب الموافقة السريعة (Approve) - الرابط الرسمي الصحيح
+    // 2. معالجة طلب الموافقة السريعة (Approve)
     if (action === 'approve') {
+      console.log(`جاري إرسال الموافقة لعملية الدفع: ${paymentId}`);
+      
       const response = await fetch(`https://minepi.com{paymentId}/approve`, {
         method: 'POST',
         headers: {
@@ -37,9 +40,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, data });
     }
 
-    // 3. معالجة طلب الاكتمال التوثيقي النهائي (Complete) - الرابط الرسمي الصحيح
+    // 3. معالجة طلب الاكتمال التوثيقي النهائي (Complete)
     if (action === 'complete') {
-      const response = await fetch(`https://minepi.com{paymentId}/approve`, {
+      if (!txid) {
+        return NextResponse.json({ error: 'Missing txid for completion' }, { status: 400 });
+      }
+
+      console.log(`جاري إتمام عملية الدفع: ${paymentId} مع معرف المعاملة: ${txid}`);
+
+      const response = await fetch(`https://minepi.com{paymentId}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Key ${PI_API_KEY}`,
@@ -62,6 +71,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Server error (pi-payment):', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Server error', message: error.message }, { status: 500 });
   }
 }

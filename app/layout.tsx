@@ -1,5 +1,4 @@
 import './globals.css';
-import Script from 'next/script';
 
 export const metadata = {
   title: 'Tamco Marketplace',
@@ -13,13 +12,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        {/* رابط مكتبة باي البرمجية الرسمية والكاملة بشكل سليم ومضمون */}
+        <script src="https://sdk.minepi.com/pi-sdk.js" defer></script>
+      </head>
       <body>
-        {/* رابط مكتبة باي البرمجية الرسمية والصحيحة لتفعيل المحفظة والدفع */}
-        <Script 
-          src="https://sdk.minepi.com/pi-sdk.js" 
-          strategy="beforeInteractive" 
-        />
         {children}
       </body>
     </html>
   );
+}
