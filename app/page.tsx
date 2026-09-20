@@ -7,7 +7,6 @@ export default function HomePage() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    // التأكد من تحميل حزمة باي نتورك بالكامل داخل المتصفح
     if (typeof window !== 'undefined' && (window as any).Pi) {
       try {
         (window as any).Pi.init({ version: "2.0", sandbox: true });
@@ -28,7 +27,7 @@ export default function HomePage() {
     setStatus("جاري تحضير معاملة التوثيق التجريبية...");
 
     try {
-      const payment = await (window as any).Pi.createPayment({
+      await (window as any).Pi.createPayment({
         amount: 1,
         memo: "Tamco Clean - توثيق وتفعيل التطبيق النهائي",
         metadata: { id: "user_verification_pi" },
@@ -37,7 +36,6 @@ export default function HomePage() {
           console.log("Payment Ready for Approval. ID:", paymentId);
           setStatus("تم تجهيز المعاملة! جاري إرسال التأكيد التلقائي للشبكة...");
           
-          // محاكاة موافقة الخادم لتخطي مشاكل الـ API الداخلية للتوثيق التجريبي
           try {
             await fetch('/api/pi-payment', {
               method: 'POST',
@@ -86,10 +84,10 @@ export default function HomePage() {
   return (
     <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif', direction: 'rtl', textAlign: 'center' }}>
       <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #ddd', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ color: '#01333', fontSize: '24px', marginBottom: '20px' }}>Tamco Clean - توثيق وتفعيل حساب</h1>
+        <h1 style={{ color: '#333', fontSize: '24px', marginBottom: '20px' }}>Tamco Clean - توثيق وتفعيل حساب</h1>
         
         {status && (
-          <p style={{ fontSize: '16px', color: '#0155A43', marginBottom: '20px', fontWeight: 'bold' }}>
+          <p style={{ fontSize: '16px', color: '#e62ba2', marginBottom: '20px', fontWeight: 'bold' }}>
             {status}
           </p>
         )}
@@ -114,3 +112,4 @@ export default function HomePage() {
       </div>
     </div>
   );
+}
