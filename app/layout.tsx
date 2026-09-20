@@ -14,11 +14,17 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
-        {/* 1. حزمة البرمجة الرسمية لشبكة باي */}
-        <Script src="https://minepi.com" strategy="beforeInteractive" />
+        {/* 1. تحميل حزمة البرمجة الرسمية لشبكة باي بالرابط الكامل */}
+        <Script 
+          src="https://minepi.com" 
+          strategy="beforeInteractive" 
+        />
 
-        {/* 2. أداة Eruda لكشف الأخطاء على الموبايل */}
-        <Script src="https://jsdelivr.net" strategy="beforeInteractive" />
+        {/* 2. تحميل أداة Eruda لكشف الأخطاء بالرابط الكامل */}
+        <Script 
+          src="https://jsdelivr.net" 
+          strategy="beforeInteractive" 
+        />
         
         {/* 3. تفعيل أداة كشف الأخطاء فور تشغيل التطبيق */}
         <Script id="eruda-init" strategy="afterInteractive">
@@ -30,3 +36,4 @@ export default function RootLayout({
       </body>
     </html>
   );
+}
