@@ -14,9 +14,8 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
-        {/* تحميل حزمة البرمجة الرسمية لشبكة باي بالرابط الكامل والجاهز للتفعيل */}
         <Script 
-          src=https://sdk.minepi.com/pi-sdk.js
+          src="https://sdk.minepi.com/pi-sdk.js" 
           strategy="beforeInteractive" 
         />
       </head>

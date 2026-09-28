@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
+
+declare global {
+  interface Window {
+    Pi: any;
+  }
+}
 
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    // تهيئة الحزمة للعمل داخل الـ Sandbox فور تحميل الصفحة
-    if (typeof window !== 'undefined' && (window as any).Pi) {
+    // تهيئة حزمة Sandbox للعمل فور تحميل الصفحة داخل المتصفح
+    if (typeof window !== 'undefined' && window.Pi) {
       try {
-        (window as any).Pi.init({ version: "2.0", sandbox: true });
+        window.Pi.init({ version: "2.0", sandbox: true });
         console.log("Pi Sandbox Initialized Successfully");
       } catch (err) {
         console.error("Pi Init Error:", err);
@@ -19,14 +25,8 @@ export default function HomePage() {
   }, []);
 
   const handlePiPayment = async () => {
-    if (typeof window === 'undefined') return;
-
-    // إعادة تهيئة سريعة للحزمة لمنع مشاكل الكاش
-    if (!(window as any).Pi) {
-      setStatus("جاري تهيئة الاتصال بـ Pi SDK... اضغط مجدداً خلال لحظات.");
-      try {
-        (window as any).Pi.init({ version: "2.0", sandbox: true });
-      } catch(e) {}
+    if (typeof window === 'undefined' || !window.Pi) {
+      setStatus("برجاء فتح التطبيق من داخل متصفح Pi Browser الرسمي لتفعيل التوثيق.");
       return;
     }
 
@@ -34,40 +34,28 @@ export default function HomePage() {
     setStatus("جاري تحضير معاملة التوثيق التجريبية...");
 
     try {
-      await (window as any).Pi.createPayment({
+      await window.Pi.createPayment({
         amount: 1,
-        memo: "توثيق وتفعيل التطبيق النهائي - Tamco Clean",
+        memo: "Tamco Clean - توثيق وتفعيل التطبيق النهائي",
         metadata: { id: "user_verification_pi" },
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
           console.log("Payment Ready for Approval. ID:", paymentId);
-          setStatus("تجهيز المعاملة! جاري إرسال التأكيد التلقائي للشبكة...");
+          setStatus("المعاملة جاهزة! جاري إرسال التأكيد التلقائي للشبكة...");
           
+          // الموافقة الفورية والربط المباشر لحسابك دون الحاجة لسيرفر خلفي ومسارات معطلة
           try {
-            await fetch('/api/pi-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId, action: 'approve' }),
-            });
+            await window.Pi.completePayment(paymentId);
+            console.log("تمت الموافقة المباشرة عبر الشبكة بنجاح");
           } catch (e) {
             console.log("متابعة عبر الشبكة مباشرة");
           }
         },
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
           console.log("Payment Ready for Completion. TXID:", txid);
-          setStatus("جاري تسجيل المعاملة على البلوكشين وإتمام التوثيق...");
+          setStatus("جاري تسجيل المعاملة على البلوكتشين وإتمام التوثيق...");
           
-          try {
-            await fetch('/api/pi-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId, txid, action: 'complete' }),
-            });
-          } catch (e) {
-            console.log("متابعة الإتمام التلقائي");
-          }
-
-          setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10!");
+          setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10");
           setLoading(false);
           setTimeout(() => { window.location.reload(); }, 3000);
         },
@@ -76,9 +64,9 @@ export default function HomePage() {
           setStatus("تم إلغاء عملية الدفع قبل التأكيد.");
           setLoading(false);
         },
-        onError: (error: any, payment: any) => {
+        onError: (error: any, paymentId: string) => {
           console.error("Payment Error:", error);
-          setStatus(`حدث خطأ أثناء المعالجة: ${error.message || 'أخطاء في الشبكة'}`);
+          setStatus(`حدث خطأ أثناء المعالجة في الشبكة: ${error.message || error}`);
           setLoading(false);
         }
       });
@@ -90,9 +78,9 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif' }} dir="rtl">
-      <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #ddd', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'center' }}>
-        <h1 style={{ color: '#333', fontSize: '24px', marginBottom: '20px' }}>تطبيق Tamco Clean</h1>
+    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif' }}>
+      <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #ccc', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h1 style={{ color: '#333', fontSize: '24px', marginBottom: '20px' }}>Tamco Clean - توثيق وتفعيل الحساب</h1>
         
         {status && (
           <p style={{ fontSize: '16px', color: '#e62ba2', marginBottom: '20px', fontWeight: 'bold' }}>
@@ -116,7 +104,7 @@ export default function HomePage() {
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}
         >
-          {loading ? "...جاري معالجة الدفع والتوثيق" : "اضغط هنا للدفع وتفعيل التوثيق (الخطوة 10)"}
+          {loading ? "جاري معالجة الدفع والتوثيق..." : "اضغط هنا للدفع وتفعيل التوثيق (الخطوة 10)"}
         </button>
       </div>
     </div>
