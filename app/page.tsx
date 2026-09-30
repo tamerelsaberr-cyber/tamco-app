@@ -13,7 +13,6 @@ export default function HomePage() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    // تهيئة حزمة Sandbox للعمل فور تحميل الصفحة داخل المتصفح
     if (typeof window !== 'undefined' && window.Pi) {
       try {
         window.Pi.init({ version: "2.0", sandbox: true });
@@ -26,47 +25,77 @@ export default function HomePage() {
 
   const handlePiPayment = async () => {
     if (typeof window === 'undefined' || !window.Pi) {
-      setStatus("برجاء فتح التطبيق من داخل متصفح Pi Browser الرسمي لتفعيل التوثيق.");
+      setStatus("يرجى فتح التطبيق من داخل متصفح Pi Browser للتفعيل");
       return;
     }
 
     setLoading(true);
-    setStatus("جاري تحضير معاملة التوثيق التجريبية...");
+    setStatus("...جاري تحضير معاملة التوثيق التجريبية");
 
     try {
       await window.Pi.createPayment({
         amount: 1,
-        memo: "Tamco Clean - توثيق وتفعيل التطبيق النهائي",
+        memo: "توثيق وتفعيل التطبيق النهائي - Tamco Clean",
         metadata: { id: "user_verification_pi" },
       }, {
+        // 1. مرحلة الموافقة السيرفرية الإلزامية للخطوة 10
         onReadyForServerApproval: async (paymentId: string) => {
-          console.log("Payment Ready for Approval. ID:", paymentId);
-          setStatus("المعاملة جاهزة! جاري إرسال التأكيد التلقائي للشبكة...");
-          
-          // الموافقة الفورية والربط المباشر لحسابك دون الحاجة لسيرفر خلفي ومسارات معطلة
+          setStatus("جاري إرسال طلب الموافقة إلى سيرفر تامكو آلياً...");
           try {
-            await window.Pi.completePayment(paymentId);
-            console.log("تمت الموافقة المباشرة عبر الشبكة بنجاح");
+            const res = await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, action: "approve" }),
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+              setStatus("تمت موافقة سيرفر تامكو، يرجى تأكيد العملية في محفظتك...");
+            } else {
+              setStatus(`فشل موافقة السيرفر: ${result.error}`);
+              setLoading(false);
+            }
           } catch (e) {
-            console.log("متابعة عبر الشبكة مباشرة");
+            console.error(e);
+            setStatus("حدث خطأ أثناء الاتصال بالسيرفر للموافقة");
+            setLoading(false);
           }
         },
+
+        // 2. مرحلة الإتمام النهائي على البلوكشين
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          console.log("Payment Ready for Completion. TXID:", txid);
-          setStatus("جاري تسجيل المعاملة على البلوكتشين وإتمام التوثيق...");
-          
-          setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10");
-          setLoading(false);
-          setTimeout(() => { window.location.reload(); }, 3000);
+          setStatus("تم الدفع بنجاح! جاري تسجيل الحركة على البلوكشين وتوثيق التطبيق...");
+          try {
+            const res = await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, action: "complete", txid }),
+            });
+            const result = await res.json();
+
+            if (result.success) {
+              setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10 🎉");
+              setLoading(false);
+              setTimeout(() => { window.location.reload(); }, 3000);
+            } else {
+              setStatus(`فشل إتمام الحركة: ${result.error}`);
+              setLoading(false);
+            }
+          } catch (e) {
+            console.error(e);
+            setStatus("حدث خطأ أثناء الاتصال بالسيرفر لإتمام الحركة");
+            setLoading(false);
+          }
         },
+
         onCancel: (paymentId: string) => {
-          console.log("Cancel:", paymentId);
-          setStatus("تم إلغاء عملية الدفع قبل التأكيد.");
+          setStatus("تم إلغاء عملية الدفع قبل التأكيد");
           setLoading(false);
         },
+
         onError: (error: any, paymentId: string) => {
           console.error("Payment Error:", error);
-          setStatus(`حدث خطأ أثناء المعالجة في الشبكة: ${error.message || error}`);
+          setStatus(`حدث خطأ أثناء المعالجة في الشبكة: ${error.message}`);
           setLoading(false);
         }
       });
@@ -78,21 +107,22 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif' }}>
-      <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #ccc', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-        <h1 style={{ color: '#333', fontSize: '24px', marginBottom: '20px' }}>Tamco Clean - توثيق وتفعيل الحساب</h1>
+    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc', flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #334155', padding: '24px', borderRadius: '8px', backgroundColor: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '100%' }}>
+        <h1 style={{ color: '#f59e0b', fontSize: '24px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>بوابة دفع تامكو للأثاث</h1>
+        <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '24px', textAlign: 'center' }}>اختبار وتجاوز خطوة الدفع رقم 10 للتطبيق النهائي</p>
         
         {status && (
-          <p style={{ fontSize: '16px', color: '#e62ba2', marginBottom: '20px', fontWeight: 'bold' }}>
-            {status}
-          </p>
+          <div style={{ padding: '16px', backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '4px', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: '#10b981', margin: 0, textAlign: 'center' }}>{status}</p>
+          </div>
         )}
 
         <button
           onClick={handlePiPayment}
           disabled={loading}
           style={{
-            backgroundColor: loading ? '#aaaaaa' : '#e62ba2',
+            backgroundColor: loading ? '#64748b' : '#10b981',
             color: 'white',
             border: 'none',
             padding: '12px 24px',
@@ -104,7 +134,7 @@ export default function HomePage() {
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}
         >
-          {loading ? "جاري معالجة الدفع والتوثيق..." : "اضغط هنا للدفع وتفعيل التوثيق (الخطوة 10)"}
+          {loading ? "...جاري معالجة الدفع والتوثيق (الخطوة 10)" : "اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10"}
         </button>
       </div>
     </div>

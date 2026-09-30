@@ -2,21 +2,26 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// جلب مفتاح التطبيق السري من إعدادات البيئة في Vercel
-const PI_API_KEY = process.env.PI_API_KEY; 
-// رابط خوادم Pi Network الافتراضي
+// جلب مفتاح التطبيق السري الآمن
+const PI_API_KEY = process.env.PI_API_KEY;
+// رابط خوادم Pi Network الافتراضي المحدث
 const PI_API_URL = "https://minepi.com";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { paymentId, action } = body;
+    // جلب كافة البيانات المرسلة من الواجهة الأمامية بما فيها معرف المعاملة txid
+    const { paymentId, action, txid } = body;
 
     if (!paymentId) {
       return NextResponse.json({ success: false, error: "Missing paymentId" }, { status: 400 });
     }
 
-    // 1. مرحلة الموافقة (Approval) - لحل مشكلة انتهاء الصلاحية
+    if (!PI_API_KEY) {
+      return NextResponse.json({ success: false, error: "Server configuration error: Missing PI_API_KEY" }, { status: 500 });
+    }
+
+    // 1. مرحلة الموافقة الثنائية (Server Approval)
     if (action === "approve") {
       const response = await fetch(`${PI_API_URL}/payments/${paymentId}/approve`, {
         method: "POST",
@@ -28,37 +33,43 @@ export async function POST(request: Request) {
 
       if (!response.ok) {
         const errData = await response.json();
-        console.error("فشل إرسال الموافقة لـ Pi:", errData);
-        return NextResponse.json({ success: false, error: "Pi Server Approval Failed" }, { status: 500 });
+        console.error("Pi Server Approval Failed:", errData);
+        return NextResponse.json({ success: false, error: "Pi Server rejected approval" }, { status: response.status });
       }
 
       const piResult = await response.json();
-      return NextResponse.json({ success: true, message: "Approved successfully", data: piResult }, { status: 200 });
+      return NextResponse.json({ success: true, message: "Payment approved successfully", data: piResult });
     }
 
-    // 2. مرحلة الإتمام النهائي (Completion) بعد نجاح العملية على البلوكشين
+    // 2. مرحلة الإتمام النهائي على البلوكشين (Server Completion)
     if (action === "complete") {
+      if (!txid) {
+        return NextResponse.json({ success: false, error: "Missing txid for completion" }, { status: 400 });
+      }
+
       const response = await fetch(`${PI_API_URL}/payments/${paymentId}/complete`, {
         method: "POST",
         headers: {
           "Authorization": `Key ${PI_API_KEY}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ txid: body.txid })
+        body: JSON.stringify({ txid: txid })
       });
 
       if (!response.ok) {
-        return NextResponse.json({ success: false, error: "Pi Server Completion Failed" }, { status: 500 });
+        const errData = await response.json();
+        console.error("Pi Server Completion Failed:", errData);
+        return NextResponse.json({ success: false, error: "Pi Server rejected completion" }, { status: response.status });
       }
 
       const piResult = await response.json();
-      return NextResponse.json({ success: true, message: "Payment Completed", data: piResult }, { status: 200 });
+      return NextResponse.json({ success: true, message: "Payment completed on blockchain", data: piResult });
     }
 
-    return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Invalid action specified" }, { status: 400 });
 
   } catch (error) {
-    console.error("Error processing payment:", error);
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+    console.error("Error processing Pi payment:", error);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

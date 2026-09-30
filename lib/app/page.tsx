@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function TamcoPaymentPage() {
-  const [paymentStatus, setPaymentStatus] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState<string>("");
   const router = useRouter();
 
   useEffect(() => {
@@ -13,55 +13,93 @@ export default function TamcoPaymentPage() {
         if ((window as any).Pi) {
           try {
             (window as any).Pi.init({ version: "2.0", sandbox: true });
-            console.log("تمت تهيئة مكتبة Pi بنجاح");
+            console.log("بنجاح Pi تمت تهيئة مكتبة");
           } catch (e) {
             console.error("Pi init error:", e);
           }
         }
       };
-
       initPi();
-      // مهلة زمنية للتأكد من حقن المتصفح للمكتبة بشكل كامل
-      const timer = setTimeout(initPi, 500);
-      return () => clearTimeout(timer);
     }
   }, []);
 
-  const handleTestPayment = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleTestPayment = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     const piInstance = (window as any).Pi;
 
     if (!piInstance) {
-      alert("تنبيه: لم يتم العثور على مكتبة Pi بعد، يرجى الانتظار ثانيتين وإعادة المحاولة من داخل التطبيق.");
+      alert("التطبيق تنبيه: لم يتم العثور على مكتبة Pi");
       return;
     }
 
-    setPaymentStatus("...جاري فتح المحفظة التجريبية وتأكيد المعاملة");
+    setPaymentStatus("جاري فتح المحفظة التجريبية وتأكيد المعاملة...");
 
     try {
       piInstance.createPayment({
-        amount: 1, // القيمة التجريبية المطلوبة للتوثيق (1 باي)
-        memo: "التوثيق التجريبي لتطبيق تامكو - الخطوة 10",
+        amount: 1, // 1 باي للتجربة واجتياز الخطوة 10
+        memo: "الخطوة 10 - التوثيق التجريبي لتطبيق تامكو",
         metadata: { appId: "tamco77478" },
       }, {
-        onReadyForServerApproval: function(paymentId: string) {
-          console.log("معرف الدفع المعتمد:", paymentId);
-          setPaymentStatus("...تمت الموافقة المبدئية، جاري تسجيل الحركة");
+        // الخطوة أ: الموافقة السيرفرية (Server Approval)
+        onReadyForServerApproval: async (paymentId: string) => {
+          console.log("معرف الدفع المعتمد للبدء:", paymentId);
+          setPaymentStatus("جاري إرسال الموافقة السيرفرية (Approval)...");
+
+          try {
+            const res = await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, action: "approve" }),
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+              setPaymentStatus("تمت موافقة السيرفر بنجاح، يرجى تأكيد الدفع في محفظتك...");
+            } else {
+              setPaymentStatus(`فشل موافقة السيرفر: ${result.error}`);
+            }
+          } catch (err) {
+            console.error(err);
+            setPaymentStatus("خطأ في الاتصال بالخلفية أثناء الموافقة");
+          }
         },
-        onConfirmed: function(paymentId: string, txid: string) {
-          console.log("اكتمل الدفع! رقم الحركة:", txid); // تم إصلاح الخطأ الإملائي هنا consple -> console
-          setPaymentStatus("مبروك! تم الدفع بنجاح واجتياز الخطوة 10");
-          alert("تم إجراء الدفع التجريبي بنجاح واجتياز الخطوة 10 بنجاح");
+
+        // الخطوة ب: الإتمام النهائي على البلوكشين (Server Completion)
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          console.log("اكتمل الدفع! رقم الحركة:", txid);
+          setPaymentStatus("جاري تسجيل وإتمام الحركة على البلوكشين...");
+
+          try {
+            const res = await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, action: "complete", txid }),
+            });
+            const result = await res.json();
+
+            if (result.success) {
+              setPaymentStatus("تهانينا! تم الدفع بنجاح واجتياز الخطوة 10 بنجاح 🎉");
+              alert("تم الدفع واجتياز الخطوة 10 بنجاح!");
+            } else {
+              setPaymentStatus(`فشل إتمام الحركة: ${result.error}`);
+            }
+          } catch (err) {
+            console.error(err);
+            setPaymentStatus("خطأ في الاتصال بالخلفية أثناء الإتمام");
+          }
         },
-        onCancel: function(paymentId: string) {
+
+        onCancel: (paymentId: string) => {
           setPaymentStatus("تم إلغاء المعاملة من قبلك");
+          console.log("تم الإلغاء:", paymentId);
         },
-        onError: function(error: any, paymentId: string) {
+
+        onError: (error: any, paymentId: string) => {
           console.error("حدث خطأ:", error);
-          setPaymentStatus("فشل الدفع: " + error.message);
-          alert("فشلت العملية: " + error.message);
-        }
+          setPaymentStatus(`فشل الدفع: ${error.message}`);
+          alert(`فشلت العملية: ${error.message}`);
+        },
       });
     } catch (err) {
       console.error(err);
@@ -69,32 +107,26 @@ export default function TamcoPaymentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-2xl text-center">
-        <h1 className="text-2xl font-bold text-amber-500 mb-2">TAMCO</h1>
-        <p className="text-sm text-slate-400 mb-6">إدارة وتوثيق تطبيق تامكو</p>
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-6">
+      <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-lg p-6 shadow-xl">
+        <h1 className="text-2xl font-bold text-amber-500 mb-2 text-center">بوابة دفع تامكو التجريبية</h1>
+        <p className="text-sm text-slate-400 mb-6 text-center">توثيق واختبار خطوة الدفع رقم 10 لتطبيق تامكو للأثاث</p>
         
-        <div className="p-4 bg-slate-900 border border-emerald-500/30 rounded-xl mb-6">
-          <h2 className="text-lg font-bold text-emerald-400 mb-1">الفوري والنهائي لتطبيق تامكو</h2>
-          <p className="text-xs text-slate-400">تجاوز الخطوة رقم 10 واختبار المحفظة</p>
+        <div className="p-4 bg-slate-900 border border-emerald-500 rounded mb-6">
+          <h2 className="text-lg font-bold text-emerald-400 mb-1">حالة المعاملة:</h2>
+          <p className="text-xs text-slate-300">{paymentStatus || "في انتظار بدء عملية الدفع..."}</p>
         </div>
 
         <button
           onClick={handleTestPayment}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition duration-200"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded transition duration-200 mb-4"
         >
           اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10
         </button>
 
-        {paymentStatus && (
-          <p className="mt-4 text-xs text-amber-400 font-medium bg-amber-500/10 py-2 px-3 rounded-lg">
-            {paymentStatus}
-          </p>
-        )}
-
         <button
           onClick={() => router.push("/")}
-          className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 px-4 rounded-xl transition duration-200 text-sm"
+          className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded transition duration-200"
         >
           العودة للرئيسية
         </button>
