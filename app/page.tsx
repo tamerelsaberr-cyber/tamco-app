@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-export default function HomePage() {
+export default function TamcoMainPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -16,7 +16,7 @@ export default function HomePage() {
     if (typeof window !== 'undefined' && window.Pi) {
       try {
         window.Pi.init({ version: "2.0", sandbox: true });
-        console.log("Pi Sandbox Initialized Successfully");
+        console.log("Pi Sandbox Mapped Successfully");
       } catch (err) {
         console.error("Pi Init Error:", err);
       }
@@ -38,7 +38,6 @@ export default function HomePage() {
         memo: "توثيق وتفعيل التطبيق النهائي - Tamco Clean",
         metadata: { id: "user_verification_pi" },
       }, {
-        // 1. مرحلة الموافقة السيرفرية الإلزامية للخطوة 10
         onReadyForServerApproval: async (paymentId: string) => {
           setStatus("جاري إرسال طلب الموافقة إلى سيرفر تامكو آلياً...");
           try {
@@ -62,7 +61,6 @@ export default function HomePage() {
           }
         },
 
-        // 2. مرحلة الإتمام النهائي على البلوكشين
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
           setStatus("تم الدفع بنجاح! جاري تسجيل الحركة على البلوكشين وتوثيق التطبيق...");
           try {
@@ -76,7 +74,6 @@ export default function HomePage() {
             if (result.success) {
               setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10 🎉");
               setLoading(false);
-              setTimeout(() => { window.location.reload(); }, 3000);
             } else {
               setStatus(`فشل إتمام الحركة: ${result.error}`);
               setLoading(false);
@@ -107,14 +104,14 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc', flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ maxWidth: '500px', margin: '0 auto', border: '1px solid #334155', padding: '24px', borderRadius: '8px', backgroundColor: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '100%' }}>
-        <h1 style={{ color: '#f59e0b', fontSize: '24px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>بوابة دفع تامكو للأثاث</h1>
-        <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '24px', textAlign: 'center' }}>اختبار وتجاوز خطوة الدفع رقم 10 للتطبيق النهائي</p>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ maxWidth: '500px', width: '100%', border: '1px solid #334155', padding: '24px', borderRadius: '8px', backgroundColor: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <h1 style={{ color: '#f59e0b', fontSize: '22px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>بوابة دفع تامكو للأثاث</h1>
+        <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', textAlign: 'center' }}>اختبار وتجاوز خطوة الدفع رقم 10 للتطبيق النهائي الحركي</p>
         
         {status && (
-          <div style={{ padding: '16px', backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '4px', marginBottom: '24px' }}>
-            <p style={{ fontSize: '14px', color: '#10b981', margin: 0, textAlign: 'center' }}>{status}</p>
+          <div style={{ padding: '12px', backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '4px', marginBottom: '20px' }}>
+            <p style={{ fontSize: '13px', color: '#10b981', margin: 0, textAlign: 'center' }}>{status}</p>
           </div>
         )}
 
@@ -125,16 +122,16 @@ export default function HomePage() {
             backgroundColor: loading ? '#64748b' : '#10b981',
             color: 'white',
             border: 'none',
-            padding: '12px 24px',
-            fontSize: '16px',
-            borderRadius: '8px',
+            padding: '14px 20px',
+            fontSize: '15px',
+            borderRadius: '6px',
             cursor: loading ? 'not-allowed' : 'pointer',
             width: '100%',
             fontWeight: 'bold',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}
         >
-          {loading ? "...جاري معالجة الدفع والتوثيق (الخطوة 10)" : "اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10"}
+          {loading ? "...جاري المعالجة والتوثيق" : "اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10"}
         </button>
       </div>
     </div>
