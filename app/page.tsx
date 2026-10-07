@@ -25,12 +25,12 @@ export default function TamcoMainPage() {
 
   const handlePiPayment = async () => {
     if (typeof window === 'undefined' || !window.Pi) {
-      setStatus("يرجى فتح التطبيق من داخل متصفح Pi Browser للتفعيل");
+      setStatus("لاستخدام محفظة Pi يرجى فتح التطبيق من داخل متصفح Pi Browser");
       return;
     }
 
     setLoading(true);
-    setStatus("...جاري تحضير معاملة التوثيق التجريبية");
+    setStatus("جاري تحفيز معاملة التوثيق التجريبية...");
 
     try {
       await window.Pi.createPayment({
@@ -41,47 +41,55 @@ export default function TamcoMainPage() {
         onReadyForServerApproval: async (paymentId: string) => {
           setStatus("جاري إرسال طلب الموافقة إلى سيرفر تامكو آلياً...");
           try {
-            const res = await fetch("/api/pi-payment", {
+            const res = await fetch("https://tamco-app.vercel.app/api/payments", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId, action: "approve" }),
             });
+
             const result = await res.json();
-            
-            if (result.success) {
-              setStatus("تمت موافقة سيرفر تامكو، يرجى تأكيد العملية في محفظتك...");
+
+            if (res.ok && !result.error) {
+              setStatus("تمت موافقة السيرفر المبدئية، يرجى تأكيد العملية في محفظتك");
+              return true; // تمرير الإذن للمحفظة للتوقيع
             } else {
-              setStatus(`فشل موافقة السيرفر: ${result.error}`);
+              setStatus(`فشلت موافقة السيرفر: ${result.error || 'خطأ غير معروف'}`);
               setLoading(false);
+              return false;
             }
           } catch (e) {
             console.error(e);
             setStatus("حدث خطأ أثناء الاتصال بالسيرفر للموافقة");
             setLoading(false);
+            return false;
           }
         },
 
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          setStatus("تم الدفع بنجاح! جاري تسجيل الحركة على البلوكشين وتوثيق التطبيق...");
+          setStatus("جاري تسجيل الحركة على البلوكشين وتوثيق التطبيق...");
           try {
-            const res = await fetch("/api/pi-payment", {
+            const res = await fetch("https://tamco-app.vercel.app/api/payments", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId, action: "complete", txid }),
+              body: JSON.stringify({ paymentId, txid, action: "complete" }),
             });
+
             const result = await res.json();
 
-            if (result.success) {
-              setStatus("تهانينا! تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10 🎉");
+            if (res.ok && !result.error) {
+              setStatus("تم تفعيل وتوثيق التطبيق بنجاح للخطوة 10!");
               setLoading(false);
+              return true;
             } else {
-              setStatus(`فشل إتمام الحركة: ${result.error}`);
+              setStatus(`فشل إتمام الحركة: ${result.error || 'خطأ غير معروف'}`);
               setLoading(false);
+              return false;
             }
           } catch (e) {
             console.error(e);
             setStatus("حدث خطأ أثناء الاتصال بالسيرفر لإتمام الحركة");
             setLoading(false);
+            return false;
           }
         },
 
@@ -92,10 +100,11 @@ export default function TamcoMainPage() {
 
         onError: (error: any, paymentId: string) => {
           console.error("Payment Error:", error);
-          setStatus(`حدث خطأ أثناء المعالجة في الشبكة: ${error.message}`);
+          setStatus(`حدث خطأ أثناء المعالجة في الشبكة: ${error.message || error}`);
           setLoading(false);
         }
       });
+
     } catch (err) {
       console.error("Trigger Error:", err);
       setStatus("فشل تفعيل نافذة الدفع، تأكد من مطابقة الروابط");
@@ -104,14 +113,14 @@ export default function TamcoMainPage() {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ maxWidth: '500px', width: '100%', border: '1px solid #334155', padding: '24px', borderRadius: '8px', backgroundColor: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ color: '#f59e0b', fontSize: '22px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>بوابة دفع تامكو للأثاث</h1>
-        <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', textAlign: 'center' }}>اختبار وتجاوز خطوة الدفع رقم 10 للتطبيق النهائي الحركي</p>
-        
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9' }}>
+      <div style={{ maxWidth: '500px', width: '100%', border: '1px solid #e0e0e0', padding: '30px', borderRadius: '8px', backgroundColor: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+        <h1 style={{ color: '#f59e0b', fontSize: '22px', marginBottom: '8px', textAlign: 'center' }}>بوابة توثيق تطبيق تامكو</h1>
+        <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', textAlign: 'center' }}>اضغط على الزر أدناه لتفعيل طلب التوثيق المالي عبر شبكة باي</p>
+
         {status && (
-          <div style={{ padding: '12px', backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '4px', marginBottom: '20px' }}>
-            <p style={{ fontSize: '13px', color: '#10b981', margin: 0, textAlign: 'center' }}>{status}</p>
+          <div style={{ padding: '12px', backgroundColor: '#0f172a', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e293b' }}>
+            <p style={{ fontSize: '13px', color: '#10b981', margin: 0, textAlign: 'center', direction: 'rtl' }}>{status}</p>
           </div>
         )}
 
@@ -128,10 +137,11 @@ export default function TamcoMainPage() {
             cursor: loading ? 'not-allowed' : 'pointer',
             width: '100%',
             fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            transition: 'background-color 0.2s'
           }}
         >
-          {loading ? "...جاري المعالجة والتوثيق" : "اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10"}
+          {loading ? "...جاري المعالجة والتوثيق" : "اجتياز الخطوة 10: تفعيل وتوثيق التطبيق"}
         </button>
       </div>
     </div>
