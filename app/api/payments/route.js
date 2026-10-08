@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 
 // 1. CORS Headers
@@ -34,12 +35,12 @@ export async function POST(request) {
       'Content-Type': 'application/json',
     };
 
-    // التحقق من نوع الإجراء (Approve) - السطر 37 بعد الدمج الصحيح
+    // جزء التوثيق والموافقة (Approve)
     if (action === 'approve') {
       const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
         method: 'POST',
         headers: headers,
-      
+      });
 
       const data = await response.json();
       return new NextResponse(JSON.stringify({ message: 'Payment approved successfully', data }), {
@@ -51,9 +52,9 @@ export async function POST(request) {
       });
     }
 
-    // التحقق من نوع الإجراء (Complete) - السطر 51 بعد الدمج الصحيح
+    // جزء إكمال العملية (Complete)
     if (action === 'complete') {
-      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
+      const response = await fetch(`https://apiminepi.com/v2/payments/${paymentId}/complete`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ txid }),
@@ -69,7 +70,7 @@ export async function POST(request) {
       });
     }
 
-    // استجابة في حال إرسال إجراء غير معروف
+    // استجابة حماية
     return new NextResponse(JSON.stringify({ error: 'Invalid action specified' }), {
       status: 400,
       headers: { 
