@@ -1,75 +1,74 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+// 1. CORS Headers لتأمين اتصال المتصفح بالسيرفر
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
 
-// جلب مفتاح التطبيق السري الآمن
-const PI_API_KEY = process.env.PI_API_KEY;
-// رابط خوادم Pi Network الافتراضي المحدث
-const PI_API_URL = "https://minepi.com";
-
-export async function POST(request: Request) {
+// 2. الدالة الرئيسية لمعالجة مدفوعات شبكة Pi
+export async function POST(request) {
   try {
     const body = await request.json();
-    // جلب كافة البيانات المرسلة من الواجهة الأمامية بما فيها معرف المعاملة txid
-    const { paymentId, action, txid } = body;
+    const { paymentId, txid, action } = body;
+    const apiKey = process.env.PI_API_KEY;
 
-    if (!paymentId) {
-      return NextResponse.json({ success: false, error: "Missing paymentId" }, { status: 400 });
+    if (!apiKey) {
+      return new NextResponse(JSON.stringify({ error: 'PI_API_KEY is missing' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
-    if (!PI_API_KEY) {
-      return NextResponse.json({ success: false, error: "Server configuration error: Missing PI_API_KEY" }, { status: 500 });
-    }
+    const headers = {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    };
 
-    // 1. مرحلة الموافقة الثنائية (Server Approval)
-    if (action === "approve") {
-      const response = await fetch(`${PI_API_URL}/payments/${paymentId}/approve`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json"
-        }
+    // خطوة الموافقة الرسمية (Approve)
+    if (action === 'approve') {
+      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
+        method: 'POST',
+        headers: headers,
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        console.error("Pi Server Approval Failed:", errData);
-        return NextResponse.json({ success: false, error: "Pi Server rejected approval" }, { status: response.status });
-      }
-
-      const piResult = await response.json();
-      return NextResponse.json({ success: true, message: "Payment approved successfully", data: piResult });
+      const data = await response.json();
+      return new NextResponse(JSON.stringify({ message: 'Payment approved successfully', data }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
-    // 2. مرحلة الإتمام النهائي على البلوكشين (Server Completion)
-    if (action === "complete") {
-      if (!txid) {
-        return NextResponse.json({ success: false, error: "Missing txid for completion" }, { status: 400 });
-      }
-
-      const response = await fetch(`${PI_API_URL}/payments/${paymentId}/complete`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ txid: txid })
+    // خطوة الإكمال والبث على البلوكشين (Complete)
+    if (action === 'complete') {
+      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ txid }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        console.error("Pi Server Completion Failed:", errData);
-        return NextResponse.json({ success: false, error: "Pi Server rejected completion" }, { status: response.status });
-      }
-
-      const piResult = await response.json();
-      return NextResponse.json({ success: true, message: "Payment completed on blockchain", data: piResult });
+      const data = await response.json();
+      return new NextResponse(JSON.stringify({ message: 'Payment completed successfully', data }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
-    return NextResponse.json({ success: false, error: "Invalid action specified" }, { status: 400 });
+    return new NextResponse(JSON.stringify({ error: 'Invalid action specified' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
 
   } catch (error) {
-    console.error("Error processing Pi payment:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return new NextResponse(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
 }

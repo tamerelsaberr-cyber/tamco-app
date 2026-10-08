@@ -22,10 +22,7 @@ export async function POST(request) {
     if (!apiKey) {
       return new NextResponse(JSON.stringify({ error: 'PI_API_KEY is missing' }), {
         status: 500,
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Access-Control-Allow-Origin': '*' 
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
 
@@ -34,9 +31,9 @@ export async function POST(request) {
       'Content-Type': 'application/json',
     };
 
-    // جزء التوثيق والموافقة (Approve)
+    // خطوة الموافقة (Approve)
     if (action === 'approve') {
-      const response = await fetch(`https://minepi.com{paymentId}/approve`, {
+      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
         method: 'POST',
         headers: headers,
       });
@@ -44,16 +41,13 @@ export async function POST(request) {
       const data = await response.json();
       return new NextResponse(JSON.stringify({ message: 'Payment approved successfully', data }), {
         status: 200,
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Access-Control-Allow-Origin': '*' 
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
 
-    // جزء إكمال العملية (Complete)
+    // خطوة الإكمال (Complete)
     if (action === 'complete') {
-      const response = await fetch(`https://minepi.com{paymentId}/complete`, {
+      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ txid }),
@@ -62,29 +56,19 @@ export async function POST(request) {
       const data = await response.json();
       return new NextResponse(JSON.stringify({ message: 'Payment completed successfully', data }), {
         status: 200,
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Access-Control-Allow-Origin': '*' 
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
 
-    // استجابة حماية
     return new NextResponse(JSON.stringify({ error: 'Invalid action specified' }), {
       status: 400,
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Access-Control-Allow-Origin': '*' 
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
 
   } catch (error) {
     return new NextResponse(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
       status: 500,
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Access-Control-Allow-Origin': '*' 
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
 }
