@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 declare global {
   interface Window {
@@ -10,26 +10,26 @@ declare global {
 
 export default function TamcoMainPage() {
   const [loading, setLoading] = useState(false);
-  const [sdkStatus, setSdkStatus] = useState('جاري فحص مكتبة Pi...');
+  const [sdkStatus, setSdkStatus] = useState("Checking Pi SDK...");
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (window.Pi) {
         try {
           window.Pi.init({ version: "2.0", sandbox: true });
-          setSdkStatus("✓ متصل بشبكة Pi بنجاح");
+          setSdkStatus("Connected to Pi Network");
         } catch (err) {
-          setSdkStatus("حدث خطأ أثناء تهيئة البيئة البرمجية.");
+          setSdkStatus("Initialization error");
         }
       } else {
-        setSdkStatus("⚠️ يرجى فتح التطبيق من داخل متصفح Pi Browser");
+        setSdkStatus("Please open in Pi Browser");
       }
     }
   }, []);
 
   const handlePayment = async () => {
-    if (typeof window === 'undefined' || !window.Pi) {
-      alert("يرجى تشغيل التطبيق من متصفح Pi لتفعيل الدفع.");
+    if (typeof window === "undefined" || !window.Pi) {
+      alert("Please open this app inside Pi Browser");
       return;
     }
 
@@ -37,7 +37,7 @@ export default function TamcoMainPage() {
     try {
       window.Pi.createPayment({
         amount: 1,
-        memo: "تفعيل اشتراك تطبيق تامكو - Tamco Pay Verification",
+        memo: "Tamco Pay Verification Subscription",
         metadata: { appId: "tamco" }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
@@ -53,16 +53,16 @@ export default function TamcoMainPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId, txid, action: "complete" })
           });
-          alert("تم التوثيق والتفعيل بنجاح! ✓");
+          alert("Verification Completed Successfully!");
           setLoading(false);
         },
         onCancel: (paymentId: string) => {
-          alert("تم إلغاء عملية الدفع.");
+          alert("Payment Cancelled");
           setLoading(false);
         },
         onError: (error: any, paymentId: string) => {
           console.error(error);
-          alert("حدث خطأ أثناء المعاملة.");
+          alert("Transaction Error");
           setLoading(false);
         }
       });
@@ -73,19 +73,21 @@ export default function TamcoMainPage() {
   };
 
   return (
-    <main style={{ padding: "40px", fontFamily: "sans-serif", textAlign: "center", direction: "rtl" }}>
-      <h1 style={{ color: "#8a2be2" }}>تطبيق تامكو - لوحة تحكم التوثيق</h1>
+    <main style={{ padding: "40px", fontFamily: "sans-serif", textAlign: "center" }}>
+      <h1 style={{ color: "#8a2be2" }}>Tamco Pay - Verification Panel</h1>
       
       <div style={{ padding: "20px", margin: "20px auto", maxWidth: "500px", borderRadius: "8px", background: "#f4f4f9", border: "1px solid #ccc" }}>
-        <h3>حالة الاتصال بالشبكة:</h3>
-        <p style={{ fontWeight: "bold", color: sdkStatus.startsWith("✓") ? "green" : "orange" }}>{sdkStatus}</p>
+        <h3>Network Status:</h3>
+        <p style={{ fontWeight: "bold", color: sdkStatus.includes("Connected") ? "green" : "orange" }}>
+          {sdkStatus}
+        </p>
         
         <button 
           onClick={handlePayment} 
           disabled={loading}
           style={{ padding: "12px 24px", background: "#8a2be2", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "16px", marginTop: "15px" }}
         >
-          {loading ? "جاري المعالجة..." : "اضغط هنا لإتمام خطوة التوثيق (1 Pi)"}
+          {loading ? "Processing..." : "Complete Step 10 Verification (1 Pi)"}
         </button>
       </div>
     </main>
