@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// 1. CORS Headers لتأمين اتصال المتصفح بالسيرفر
+// 1. CORS Headers لتأمين اتصال متصفح باي بالسيرفر الخلفي
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -12,17 +12,20 @@ export async function OPTIONS() {
   });
 }
 
-// 2. الدالة الرئيسية لمعالجة مدفوعات شبكة Pi
-export async function POST(request) {
+// 2. الدالة الرئيسية لمعالجة مدفوعات شبكة باي
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { paymentId, txid, action } = body;
     const apiKey = process.env.PI_API_KEY;
 
     if (!apiKey) {
-      return new NextResponse(JSON.stringify({ error: 'PI_API_KEY is missing' }), {
+      return new NextResponse(JSON.stringify({ error: 'PI_API_KEY is missing on Vercel environment' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
@@ -41,11 +44,14 @@ export async function POST(request) {
       const data = await response.json();
       return new NextResponse(JSON.stringify({ message: 'Payment approved successfully', data }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
-    // خطوة الإكمال والبث على البلوكشين (Complete)
+    // خطوة الإكمال والبث على البلوكتشين (Complete)
     if (action === 'complete') {
       const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
         method: 'POST',
@@ -56,19 +62,28 @@ export async function POST(request) {
       const data = await response.json();
       return new NextResponse(JSON.stringify({ message: 'Payment completed successfully', data }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
     return new NextResponse(JSON.stringify({ error: 'Invalid action specified' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     return new NextResponse(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
   }
 }
