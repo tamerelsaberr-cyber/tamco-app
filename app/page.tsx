@@ -38,6 +38,7 @@ export default function TamcoMainPage() {
       window.Pi.createPayment({
         amount: 1,
         memo: "Tamco Pay Verification Subscription",
+        recipient: GBBVIQAKX5QTI6FG6BVI2AZB6QWIJIL5V6HNTK3JLFL6HBHZY7FQLLPC,
         metadata: { appId: "tamco" }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
