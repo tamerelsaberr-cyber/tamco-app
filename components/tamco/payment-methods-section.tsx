@@ -1,9 +1,7 @@
-
 "use client";
 
 import { CreditCard, Smartphone, ArrowLeftRight, Pi } from "lucide-react";
 
-// تعريف واجهة window لمنع أخطاء التايب سكريبت (TypeScript)
 declare global {
   interface Window {
     Pi?: any;
@@ -19,29 +17,52 @@ const methods = [
 
 export function PaymentMethodsSection() {
   
-  // دالة التعامل مع الدفع والمصادقة الخاصة بـ Pi Network
   const handlePiPayment = async () => {
     if (typeof window !== "undefined" && window.Pi) {
       try {
-        // 1. طلب تسجيل الدخول والمصادقة (خطوة إلزامية لتوقيع المعاملات)
+        // 1. تهيئة مكتبة باي وتفعيل الوضع التجريبي
+        await window.Pi.init({ version: "2.0", sandbox: true });
+
+        // 2. طلب تسجيل الدخول والمصادقة للمستخدم
         const scopes = ["username", "payments"];
         await window.Pi.authenticate(scopes, (payment: any) => {
           console.log("Payment in progress: ", payment);
         });
 
-        // 2. إطلاق واجهة الدفع الرسمية وتجهيز معالجة البيانات
+        // 3. إطلاق واجهة الدفع والربط المباشر مع الـ Backend (route.ts)
         window.Pi.createPayment({
-          amount: 1, // قيمة المبلغ المطلوب نقله بالعملة التجريبية
-          memo: "Complete Step 10 Verification", // الوصف المكتوب بلوحة التحكم
+          amount: 1, 
+          memo: "Complete Step 10 Verification", 
           metadata: { internalId: "verification_step_10" }
         }, {
-          onReadyForServerApproval: function(paymentId: string) {
-            console.log("Ready for server approval, ID:", paymentId);
-            // هنا يرسل الكود المعرف إلى الـ API الخاص بـ Backend لتوثيقه مع خوادم باى
+          // خطوة الموافقة الرسمية من السيرفر
+          onReadyForServerApproval: async function(paymentId: string) {
+            try {
+              const res = await fetch("/api/payments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ paymentId, action: "approve" })
+              });
+              const data = await res.json();
+              console.log("Server Approval Response:", data);
+            } catch (err) {
+              console.error("Approval error:", err);
+            }
           },
-          onReadyForServerCompletion: function(paymentId: string, txid: string) {
-            console.log("Payment completed on blockchain. TXID:", txid);
-            alert("تمت عملية الدفع وتوثيق الخطوة بنجاح!");
+          // خطوة إتمام البلوكشين وتأكيد الدفع النهائي
+          onReadyForServerCompletion: async function(paymentId: string, txid: string) {
+            try {
+              const res = await fetch("/api/payments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ paymentId, txid, action: "complete" })
+              });
+              const data = await res.json();
+              console.log("Server Completion Response:", data);
+              alert("تمت عملية الدفع وتوثيق الخطوة بنجاح كامل!");
+            } catch (err) {
+              console.error("Completion error:", err);
+            }
           },
           onCancel: function(paymentId: string) {
             alert("تم إلغاء عملية الدفع من قبل المستخدم.");
@@ -52,7 +73,7 @@ export function PaymentMethodsSection() {
         });
 
       } catch (error: any) {
-        alert("فشلت عملية المصادقة مع المحفظة: " + error.message);
+        alert("فشلت عملية المصادقة أو التهيئة: " + error.message);
       }
     } else {
       alert("تنبيه: يرجى فتح الرابط من داخل تطبيق Pi Browser الرسمي لتفعيل اتصال المحفظة!");
@@ -70,7 +91,6 @@ export function PaymentMethodsSection() {
           return (
             <div
               key={method.label}
-              // تفعيل ميزة الضغط في حال كان الخيار هو Pi Network فقط
               onClick={isPi ? handlePiPayment : undefined}
               className={`bg-card border border-border rounded-2xl p-4 flex flex-col justify-between transition-all ${
                 isPi 
@@ -91,3 +111,4 @@ export function PaymentMethodsSection() {
       </div>
     </section>
   );
+}
