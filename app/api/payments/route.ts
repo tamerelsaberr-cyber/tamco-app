@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// 1. CORS Headers لتأمين اتصال متصفح باي بالسيرفر الخلفي
+// 1. CORS Headers لمزامنة متصفح باي بالسيرفر الخلفي
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -12,11 +12,11 @@ export async function OPTIONS() {
   });
 }
 
-// 2. الدالة الرئيسية لمعالجة مدفوعات شبكة باي
+// الدالة الرئيسية لمعالجة مدفوعات شبكة باي
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { paymentId, txid, action } = body;
+    const { paymentId, txid, action, amount, memo, uid } = body;
     const apiKey = process.env.PI_API_KEY;
 
     if (!apiKey) {
@@ -34,9 +34,35 @@ export async function POST(request: Request) {
       'Content-Type': 'application/json',
     };
 
-    // خطوة الموافقة الرسمية (Approve)
+    // أ) خطوة إنشاء الدفع الأولي 
+    if (!action && amount) {
+      const response = await fetch('https://minepi.com', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          payment: {
+            amount: amount,
+            memo: memo || 'Tamco Payment',
+            metadata: { internalId: 'verification_step_10' },
+            uid: uid || 'test-user-uid' // يقبل الـ uid الديناميكي القادم من المتصفح
+          }
+        })
+      });
+
+      const data = await response.json();
+      
+      return new NextResponse(JSON.stringify(data), {
+        status: response.status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
+    // ب) خطوة الموافقة الرسمية (Approve)
     if (action === 'approve') {
-      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
+      const response = await fetch(`https://minepi.com/${paymentId}/approve`, {
         method: 'POST',
         headers: headers,
       });
@@ -51,9 +77,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // خطوة الإكمال والبث على البلوكتشين (Complete)
+    // ج) خطوة الإكمال والبحث على البلوكتشين (Complete)
     if (action === 'complete') {
-      const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
+      const response = await fetch(`https://minepi.com/${paymentId}/complete`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ txid }),
