@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  try {
+    const { paymentId, txid } = await req.json();
 
-  const body = await req.json();
-  const { id } = body;
+    if (!paymentId) {
+      return NextResponse.json({ error: "paymentId missing" }, { status: 400 });
+    }
 
-  const { error } = await supabase
-    .from("pi_requests")
-    .update({ status: "completed" })
-    .eq("id", id);
+    const PI_API_KEY = process.env.PI_API_KEY;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+    const piRes = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${PI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ txid }),
+    });
+
+    if (!piRes.ok) {
+      const errText = await piRes.text();
+      console.log("Pi complete error:", errText);
+      return NextResponse.json({ error: errText }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }
