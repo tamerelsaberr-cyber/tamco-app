@@ -1,99 +1,64 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
-declare global {
-  interface Window {
-    Pi: any;
-  }
-}
+declare global { interface Window { Pi: any } }
 
-export default function TamcoMainPage() {
-  const [sdkStatus, setSdkStatus] = useState("Checking Pi...");
-  const [loading, setLoading] = useState(false);
+export default function TamcoPage() {
+  const [user, setUser] = useState<any>(null);
+  const [status, setStatus] = useState("Checking Pi...");
 
   useEffect(() => {
     const initPi = async () => {
-      if (typeof window !== "undefined") {
-        if (window.Pi) {
-          try {
-            window.Pi.init({ version: "2.0", sandbox: true });
-            const onIncompletePaymentFound = (payment: any) => {
-              console.log("Incomplete payment", payment);
-            };
-            const auth = await window.Pi.authenticate(['payments', 'username'], onIncompletePaymentFound);
-            console.log("Auth:", auth);
-            setSdkStatus("Connected to Pi Network");
-          } catch (err) {
-            console.log("Auth error:", err);
-            setSdkStatus("Initialization error");
-          }
-        } else {
-          setSdkStatus("Please open in Pi Browser");
+      if (typeof window !== "undefined" && (window as any).Pi) {
+        const Pi = (window as any).Pi;
+        Pi.init({ version: "2.0", sandbox: true });
+        try {
+          const auth = await Pi.authenticate(["username", "payments"], () => {});
+          setUser(auth.user);
+          setStatus("Connected to Pi Network");
+        } catch {
+          setStatus("Please open in Pi Browser");
         }
       }
     };
     initPi();
   }, []);
 
-  const handlePayment = async () => {
-    if (typeof window === "undefined" || !window.Pi) {
-      alert("Please open this app inside Pi Browser");
-      return;
-    }
-
-    setLoading(true);
+  const handlePay = async () => {
+    if (!(window as any).Pi) return alert("Open in Pi Browser");
     try {
-      const payment = await window.Pi.createPayment({
+      setStatus("Processing...");
+      await (window as any).Pi.createPayment({
         amount: 1,
-        memo: "Tamco Payment",
-        metadata: { orderId: "tamco-1" },
+        memo: "TAMCO Order",
+        metadata: { orderId: "TAMCO-001" },
       }, {
-        onReadyForServerApproval: (paymentId: string) => {
-          console.log("Ready for approval:", paymentId);
+        onReadyForServerApproval: async (paymentId: string) => {
+          await fetch("/api/pi/approve", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ paymentId }) });
         },
-        onReadyForServerCompletion: (paymentId: string, txid: string) => {
-          console.log("Ready for completion:", paymentId, txid);
-          setLoading(false);
-          alert("Payment Successful!");
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          await fetch("/api/pi/complete", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ paymentId, txid }) });
+          setStatus("Payment Successful!");
         },
-        onCancel: (paymentId: string) => {
-          console.log("Cancelled:", paymentId);
-          setLoading(false);
-        },
-        onError: (error: any, payment: any) => {
-          console.log("Payment error:", error);
-          setLoading(false);
-        },
+        onCancel: () => setStatus("Payment Cancelled"),
+        onError: (err: any) => setStatus("Error: " + err.message),
       });
-      console.log(payment);
-    } catch (err) {
-      console.log(err);
-      setLoading(false);
-    }
+    } catch (e: any) { setStatus("Error: " + e.message); }
   };
 
   return (
-    <div style={{ padding: 20, textAlign: "center", fontFamily: "sans-serif" }}>
-      <h1>TAMCO</h1>
-      <p>Status: {sdkStatus}</p>
-      <p>Price: 1 Pi</p>
-      <button
-        onClick={handlePayment}
-        disabled={loading}
-        style={{
-          padding: "15px 30px",
-          fontSize: 18,
-          background: "#6d28d9",
-          color: "white",
-          border: "none",
-          borderRadius: 12,
-          cursor: "pointer",
-          opacity: loading ? 0.5 : 1
-        }}
-      >
-        {loading ? "Processing..." : "Pay with Pi"}
-      </button>
+    <div style={{ minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif", padding: 20, textAlign: "center" }}>
+      <h1 style={{ fontSize: 48 }}>TAMCO</h1>
+      <p style={{ color: "#aaa" }}>{status}</p>
+      {user && <p>Welcome, {user.username}</p>}
+
+      <div style={{ maxWidth: 500, margin: "30px auto", background: "#1a1a1a", padding: 30, borderRadius: 16 }}>
+        <h2>TAMCO Product</h2>
+        <p style={{ fontSize: 24, fontWeight: "bold" }}>Price: 1 Pi</p>
+        <button onClick={handlePay} style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "16px 32px", borderRadius: 12, fontSize: 18, cursor: "pointer", width: "100%" }}>
+          Pay with Pi
+        </button>
+      </div>
     </div>
   );
 }
