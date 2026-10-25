@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 declare global {
   interface Window {
@@ -9,27 +9,31 @@ declare global {
 }
 
 export default function TamcoMainPage() {
+  const [sdkStatus, setSdkStatus] = useState("Checking Pi...");
   const [loading, setLoading] = useState(false);
-  const [sdkStatus, setSdkStatus] = useState("Checking Pi SDK...");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (window.Pi) {
-        try {
-        window.Pi.init({ version: "2.0", sandbox: true });
-const onIncompletePaymentFound = (payment: any) => {
-  console.log("Incomplete payment", payment);
-};
- window.Pi.authenticate(['payments', 'username'], onIncompletePaymentFound);
-setSdkStatus("Connected to Pi Network");  
-  } catch (err) {
-  setSdkStatus("Initialization error");
-}       
-    
-      } else {
-        setSdkStatus("Please open in Pi Browser");
+    const initPi = async () => {
+      if (typeof window !== "undefined") {
+        if (window.Pi) {
+          try {
+            window.Pi.init({ version: "2.0", sandbox: true });
+            const onIncompletePaymentFound = (payment: any) => {
+              console.log("Incomplete payment", payment);
+            };
+            const auth = await window.Pi.authenticate(['payments', 'username'], onIncompletePaymentFound);
+            console.log("Auth:", auth);
+            setSdkStatus("Connected to Pi Network");
+          } catch (err) {
+            console.log("Auth error:", err);
+            setSdkStatus("Initialization error");
+          }
+        } else {
+          setSdkStatus("Please open in Pi Browser");
+        }
       }
-    }
+    };
+    initPi();
   }, []);
 
   const handlePayment = async () => {
@@ -40,62 +44,56 @@ setSdkStatus("Connected to Pi Network");
 
     setLoading(true);
     try {
-      window.Pi.createPayment({
+      const payment = await window.Pi.createPayment({
         amount: 1,
-        memo: "Tamco Pay Verification Subscription",
-        
-        metadata: { appId: "tamco" }
+        memo: "Tamco Payment",
+        metadata: { orderId: "tamco-1" },
       }, {
-        onReadyForServerApproval: async (paymentId: string) => {
-          await fetch("/api/payments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, action: "approve" })
-          });
+        onReadyForServerApproval: (paymentId: string) => {
+          console.log("Ready for approval:", paymentId);
         },
-        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          await fetch("/api/payments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, txid, action: "complete" })
-          });
-          alert("Verification Completed Successfully!");
+        onReadyForServerCompletion: (paymentId: string, txid: string) => {
+          console.log("Ready for completion:", paymentId, txid);
           setLoading(false);
+          alert("Payment Successful!");
         },
         onCancel: (paymentId: string) => {
-          alert("Payment Cancelled");
+          console.log("Cancelled:", paymentId);
           setLoading(false);
         },
-        onError: (error: any, paymentId: string) => {
-          console.error(error);
-          alert("Transaction Error");
+        onError: (error: any, payment: any) => {
+          console.log("Payment error:", error);
           setLoading(false);
-        }
+        },
       });
-    } catch (error) {
-      console.error(error);
+      console.log(payment);
+    } catch (err) {
+      console.log(err);
       setLoading(false);
     }
   };
 
   return (
-    <main style={{ padding: "40px", fontFamily: "sans-serif", textAlign: "center" }}>
-      <h1 style={{ color: "#8a2be2" }}>Tamco Pay - Verification Panel</h1>
-      
-      <div style={{ padding: "20px", margin: "20px auto", maxWidth: "500px", borderRadius: "8px", background: "#f4f4f9", border: "1px solid #ccc" }}>
-        <h3>Network Status:</h3>
-        <p style={{ fontWeight: "bold", color: sdkStatus.includes("Connected") ? "green" : "orange" }}>
-          {sdkStatus}
-        </p>
-        
-        <button 
-          onClick={handlePayment} 
-          disabled={loading}
-          style={{ padding: "12px 24px", background: "#8a2be2", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "16px", marginTop: "15px" }}
-        >
-          {loading ? "Processing..." : "Complete Step 10 Verification (1 Pi)"}
-        </button>
-      </div>
-    </main>
+    <div style={{ padding: 20, textAlign: "center", fontFamily: "sans-serif" }}>
+      <h1>TAMCO</h1>
+      <p>Status: {sdkStatus}</p>
+      <p>Price: 1 Pi</p>
+      <button
+        onClick={handlePayment}
+        disabled={loading}
+        style={{
+          padding: "15px 30px",
+          fontSize: 18,
+          background: "#6d28d9",
+          color: "white",
+          border: "none",
+          borderRadius: 12,
+          cursor: "pointer",
+          opacity: loading ? 0.5 : 1
+        }}
+      >
+        {loading ? "Processing..." : "Pay with Pi"}
+      </button>
+    </div>
   );
 }
