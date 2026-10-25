@@ -16,11 +16,16 @@ export default function TamcoMainPage() {
     if (typeof window !== "undefined") {
       if (window.Pi) {
         try {
-          window.Pi.init({ version: "2.0", sandbox: true });
-          setSdkStatus("Connected to Pi Network");
-        } catch (err) {
-          setSdkStatus("Initialization error");
-        }
+        window.Pi.init({ version: "2.0", sandbox: true });
+const onIncompletePaymentFound = (payment: any) => {
+  console.log("Incomplete payment", payment);
+};
+ window.Pi.authenticate(['payments', 'username'], onIncompletePaymentFound);
+setSdkStatus("Connected to Pi Network");  
+  } catch (err) {
+  setSdkStatus("Initialization error");
+}       
+    
       } else {
         setSdkStatus("Please open in Pi Browser");
       }
