@@ -1,93 +1,141 @@
-"use client";
+'use client';
+import { useState } from 'react';
+import { ADMIN_CONFIG } from './config';
+import AuthGate from './components/AuthGate';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+export default function AdminPage() {
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [cost, setCost] = useState('');
+  const [image, setImage] = useState('');
+  const [country, setCountry] = useState('EG');
+  const [vendorType, setVendorType] = useState<'PI' | 'FIAT'>('PI');
 
-export default function TamcoPaymentPage() {
-  const [paymentStatus, setPaymentStatus] = useState("");
-  const router = useRouter();
+  const handleImage = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
-  useEffect(() => {
-    // تهيئة مكتبة Pi لبيئة الاختبار (Testnet) بأمان فور فتح الصفحة
-    if (typeof window !== "undefined" && (window as any).Pi) {
-      try {
-        (window as any).Pi.init({ version: "2.0", sandbox: true });
-      } catch (e) {
-        console.error("Pi init error:", e);
-      }
-    }
-  }, []);
-
-  // دالة الدفع التجريبي المباشرة لمنع الهروب لمنصة Vercel والتخلص من الصفحة البيضاء
-  const handleTestPayment = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault(); // منع المتصفح من فتح أي روابط خارجية
-
-    if (!(window as any).Pi) {
-      alert("يرجى الضغط على هذا الزر من داخل تطبيق Pi Browser على الهاتف حصراً لتشغيل المحفظة.");
+  const handleSave = () => {
+    if (!name || !price || !image) {
+      alert('⚠️ املى اسم المنتج وسعر البيع والصورة');
       return;
     }
 
-    setPaymentStatus("جاري فتح المحفظة التجريبية وتأكيد المعاملة...");
+    const priceNum = parseFloat(price);
+    const costNum = parseFloat(cost) || 0;
+    const profit = priceNum - costNum;
 
-    try {
-      (window as any).Pi.createPayment({
-        amount: 1, // القيمة التجريبية المطلوبة للتوثيق (1 باي)
-        memo: "التوثيق التجريبي لتطبيق تامكو - الخطوة 10",
-        metadata: { appId: "tamco77478" } // معرف تطبيقك الخاص
-      }, {
-        onReadyForServerApproval: function(paymentId: string) {
-          console.log("معرف الدفع المعتمد:", paymentId);
-          setPaymentStatus("تمت الموافقة المبدئية، جاري تسجيل الحركة...");
-        },
-        onReadyForServerCompletion: function(paymentId: string, txid: string) {
-          console.log("اكتمل الدفع! رقم الحركة:", txid);
-          setPaymentStatus("مبروك! تم الدفع بنجاح واجتزت الخطوة 10.");
-          alert("تم إجراء الدفع التجريبي بنجاح واجتزت الخطوة 10 بنجاح!");
-        },
-        onCancel: function(paymentId: string) {
-          setPaymentStatus("تم إلغاء المعاملة من قبلك.");
-        },
-        onError: function(error: any, paymentId: string) {
-          console.error("حدث خطأ:", error);
-          setPaymentStatus("فشل الدفع: " + error.message);
-          alert("فشلت العملية: " + error.message);
-        }
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    // القاعدة اللي اتفقنا عليها
+    // Pi مشترك: Pi يدفع 50% Pi + 50% بعملة بلده - التاجر ياخد 50% Pi + 50% بلده
+    // خارجي: يدفع 100% بعملة بلده فقط
+    const piAmount = vendorType === 'PI' ? priceNum * 0.5 : 0;
+    const fiatAmount = vendorType === 'PI' ? priceNum * 0.5 : priceNum;
+
+    // توزيع الربح 70% متجر / 30% شبكة
+    const storeShare = profit * 0.7;
+    const networkShare = profit * 0.3;
+
+    const newProduct = {
+      id: Date.now(),
+      name,
+      price: priceNum,
+      cost: costNum,
+      profit,
+      image,
+      wallet: ADMIN_CONFIG.wallet,
+      piNetwork: { sdk: 'Pi SDK 2.0', isBase: true, title: 'Pi هو الأساس' },
+      design: { theme: 'فرعوني', gold: '#D4AF37', black: '#111' },
+      vendorType,
+      country,
+      fiatCurrency: country,
+      distribution: {
+        pi: piAmount,
+        fiat: fiatAmount,
+        rule: vendorType === 'PI' ? '50% Pi + 50% بلده' : '100% بلده',
+      },
+      feeDistribution: {
+        store: '70%',
+        storeValue: storeShare,
+        network: '30%',
+        networkValue: networkShare,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    const products = JSON.parse(localStorage.getItem('tamco_products') || '[]');
+    products.push(newProduct);
+    localStorage.setItem('tamco_products', JSON.stringify(products));
+
+    alert(`✅ تم الحفظ في محفظة ${ADMIN_CONFIG.wallet}
+المنتج: ${name}
+النوع: ${vendorType === 'PI' ? 'Pi مشترك - Pi ياخد + بلده' : 'خارجي - ياخد بلده فقط'}
+الربح: ${profit} مقسم 70% متجر / 30% شبكة`);
+
+    setName('');
+    setPrice('');
+    setCost('');
+    setImage('');
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-6" style={{ direction: "rtl" }}>
-      <div className="max-w-md w-full bg-slate-800 p-8 border border-slate-700 rounded-2xl text-center shadow-2xl">
-        <h1 className="text-2xl font-bold text-amber-500 mb-2">TAMCO بوابة إدارة وتوثيق</h1>
-        <p className="text-sm text-slate-400 mb-6">مرحباً بك في صفحة التوثيق الفوري والنهائي لتطبيق تامكو</p>
-        
-        <div className="p-4 bg-slate-900 border border-emerald-500/30 rounded-xl mb-6">
-          <h2 className="text-lg font-bold text-emerald-400 mb-1">اجتياز الخطوة رقم 10</h2>
-          <p className="text-xs text-slate-400">اضغط على الزر أدناه لتشغيل المحفظة وتأكيد الدفع التجريبي مباشرة دون الخروج لفيرسيل.</p>
+    <AuthGate>
+      <div style={{ padding: 20, maxWidth: 700, margin: '0 auto', background: '#111', color: 'white', minHeight: '100vh' }}>
+        <h1 style={{ color: '#D4AF37', borderBottom: '2px solid #D4AF37', paddingBottom: 10 }}>
+          TAMCO - لوحة تحكم Pi هو الأساس
+        </h1>
+
+        <div style={{ border: '1px dashed #D4AF37', padding: 12, marginTop: 15, fontSize: 11, wordBreak: 'break-all', background: '#1a1a1a' }}>
+          <p>🔹 Pi هو الأساس - متجر الـ Pi مع Pi SDK 2.0</p>
+          <p>🔹 محفظة التطبيق: {ADMIN_CONFIG.wallet} - Pi هو الأساس</p>
         </div>
 
-        {/* هذا هو الزر السحري المعدل الذي سيستدعي المحفظة مباشرة */}
-        <button 
-          onClick={handleTestPayment}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-bold transition-all shadow-lg transform active:scale-95"
-        >
-          اضغط هنا لإجراء دفع تجريبي وتجاوز الخطوة 10
-        </button>
-        
-        {paymentStatus && (
-          <p className="mt-4 text-xs text-amber-400 font-medium animate-pulse">{paymentStatus}</p>
-        )}
-        
-        <button 
-          onClick={() => router.push("/")}
-          className="mt-6 text-xs text-slate-500 hover:text-slate-400 underline block mx-auto"
-        >
-          العودة للمتجر الرئيسي
-        </button>
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <label>📸 صورة المنتج:</label>
+          <input type="file" accept="image/*" onChange={handleImage} />
+          {image && <img src={image} style={{ width: 200, border: '2px solid #D4AF37', borderRadius: 8 }} alt="preview" />}
+
+          <label>🏷️ اسم المنتج:</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="اسم المنتج" style={{ padding: 10, color: 'black', borderRadius: 4 }} />
+
+          <label>💰 سعر البيع Pi:</label>
+          <input type="number" step="0.1" value={price} onChange={e => setPrice(e.target.value)} placeholder="مثال: 1.5" style={{ padding: 10, color: 'black', borderRadius: 4 }} />
+
+          <label>💸 تكلفة المنتج:</label>
+          <input type="number" step="0.1" value={cost} onChange={e => setCost(e.target.value)} placeholder="مثال: 0.5" style={{ padding: 10, color: 'black', borderRadius: 4 }} />
+
+          <label>🌍 عملة بلد التاجر:</label>
+          <select value={country} onChange={e => setCountry(e.target.value)} style={{ padding: 10, color: 'black', borderRadius: 4 }}>
+            <option value="EG">EGP - جنيه مصري</option>
+            <option value="SA">SAR - ريال سعودي</option>
+            <option value="AE">AED - درهم اماراتي</option>
+            <option value="US">USD - دولار</option>
+          </select>
+
+          <label>📦 نوع المعرض / البازار:</label>
+          <select value={vendorType} onChange={e => setVendorType(e.target.value as any)} style={{ padding: 10, color: 'black', borderRadius: 4 }}>
+            <option value="PI">✅ مشترك في Pi - 50% Pi + 50% بلده</option>
+            <option value="FIAT">🏪 معرض خارجي - ياخد 100% بعملة بلده فقط</option>
+          </select>
+
+          <div style={{ border: '1px dashed #D4AF37', padding: 10, fontSize: 12, background: '#222' }}>
+            <p>🔹 Pi مشترك: Pi الزبون يدفع Pi + ياخد التاجر 50% Pi + 50% بلده</p>
+            <p>🔹 خارجي: الزبون يدفع فيات → التاجر ياخد فيات بس</p>
+            <p>🔹 الربح: 70% للمتجر / 30% للشبكة - كله مربوط بـ {ADMIN_CONFIG.wallet.slice(0,4)}...</p>
+          </div>
+
+          <button onClick={handleSave} style={{ background: '#D4AF37', color: 'black', padding: 14, fontWeight: 'bold', width: '100%', borderRadius: 6, cursor: 'pointer', marginTop: 5 }}>
+            ✅ حفظ في {ADMIN_CONFIG.wallet.slice(0,8)} - Pi هو الأساس
+          </button>
+
+          <button onClick={() => window.location.href='/'} style={{ border: '1px solid #888', padding: 10, width: '100%', borderRadius: 6, background: 'transparent', color: 'white', cursor: 'pointer' }}>
+            ← العودة للمتجر
+          </button>
+        </div>
       </div>
-    </div>
+    </AuthGate>
   );
 }

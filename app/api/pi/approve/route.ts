@@ -3,13 +3,15 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const { paymentId } = await req.json();
-
     if (!paymentId) {
       return NextResponse.json({ error: "paymentId missing" }, { status: 400 });
     }
 
     const PI_API_KEY = process.env.PI_API_KEY;
-    
+    if (!PI_API_KEY) {
+      return NextResponse.json({ error: "PI_API_KEY missing" }, { status: 500 });
+    }
+
     const piRes = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
       method: "POST",
       headers: {
@@ -24,7 +26,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: errText }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
+    const data = await piRes.json();
+    return NextResponse.json(data);
+
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
