@@ -1,50 +1,60 @@
 // @ts-nocheck
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Page() {
   const [status, setStatus] = useState("");
+
+  // ده اللي كان ناقص - نعمل init أول ما الصفحة تفتح
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const Pi = (window as any).Pi;
+      if (Pi) {
+        Pi.init({ version: "2.0" });
+        console.log("Pi SDK Initialized");
+        clearInterval(interval);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   const handlePay = async () => {
     try {
       const Pi = (window as any).Pi;
       if (!Pi) {
-        setStatus("❌ لازم تفتح الموقع من Pi Browser");
+        setStatus("❌ افتح من Pi Browser");
         return;
       }
 
-      Pi.init({ version: "2.0", sandbox: true });
+      // مش هنعمل init هنا تاني - خلاص اتعمل فوق
 
-      await Pi.authenticate(["username", "payments"], (payment: any) => {
-        console.log("incomplete payment", payment);
+      await Pi.authenticate(["username", "payments"], (p: any) => {
+        console.log("Incomplete payment:", p);
       });
 
-      const isOwner = window.confirm("هل انت صاحب المتجر؟\nOK = انت صاحب (0.005 Pi)\nCancel = انت زبون (10 Pi)");
+      const isOwner = window.confirm("هل انت صاحب المتجر؟\nOK = 0.005 Pi\nCancel = 10 Pi");
       const amount = isOwner ? 0.005 : 10;
 
-      setStatus(`جاري دفع ${amount} Pi ...`);
+      setStatus(`جاري دفع ${amount} Pi...`);
 
       await Pi.createPayment(
         {
           amount: amount,
           memo: "TAMCO Product",
-          metadata: { product: "TAMCO-001", price: amount },
+          metadata: { price: amount },
         },
         {
-          onReadyForServerApproval: (paymentId: string) => {
-            console.log("approval", paymentId);
-            setStatus(`✅ تمت الموافقة - ${amount} Pi - في انتظار التأكيد`);
+          onReadyForServerApproval: (id: string) => {
+            setStatus(`✅ تمت الموافقة على ${amount} Pi`);
+            console.log("APPROVAL ID:", id);
           },
-          onReadyForServerCompletion: (paymentId: string, txid: string) => {
-            console.log("completed", paymentId, txid);
+          onReadyForServerCompletion: (id: string, txid: string) => {
             setStatus(`✅ تم الدفع بنجاح ${amount} Pi`);
           },
-          onCancel: (paymentId: string) => {
-            setStatus("❌ تم إلغاء الدفع");
-          },
-          onError: (error: any, payment: any) => {
-            console.error(error);
-            setStatus(`❌ خطأ: ${error.message}`);
+          onCancel: () => setStatus("❌ تم الإلغاء"),
+          onError: (e: any) => {
+            console.error(e);
+            setStatus(`❌ خطأ: ${e.message}`);
           },
         }
       );
@@ -55,18 +65,13 @@ export default function Page() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", padding: 20 }}>
-      <h1 style={{ fontSize: 32, fontWeight: "bold" }}>TAMCO Product</h1>
-      <p style={{ margin: "10px 0 20px", color: "#666" }}>Owner: 0.005 Pi | Customer: 10 Pi</p>
-      
-      <button
-        onClick={handlePay}
-        style={{ background: "#6c4eff", color: "white", padding: "15px 35px", borderRadius: 12, border: "none", fontSize: 20, fontWeight: "bold", cursor: "pointer" }}
-      >
+    <div style={{ textAlign: "center", padding: 60 }}>
+      <h1>TAMCO Product</h1>
+      <p>Owner: 0.005 / Customer: 10 Pi</p>
+      <button onClick={handlePay} style={{ background: "#6c4eff", color: "white", padding: "15px 30px", borderRadius: 10, border: "none", fontSize: 18 }}>
         Pay with Pi
       </button>
-
-      <p style={{ marginTop: 20, fontWeight: "bold", minHeight: 24 }}>{status}</p>
+      <p>{status}</p>
     </div>
   );
 }
