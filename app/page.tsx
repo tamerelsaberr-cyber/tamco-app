@@ -30,7 +30,7 @@ export default function Page() {
         {
           onReadyForServerApproval: async (id: string) => {
             setStatus(`✅ تمت الموافقة على ${id}`);
-            await fetch("/api/pi/approve", {
+            await fetch("https://tamco-app.vercel.app/api/pi/approve", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId: id }),
@@ -38,7 +38,7 @@ export default function Page() {
           },
           onReadyForServerCompletion: async (id: string, txid: string) => {
             setStatus(`✅ تم الدفع بنجاح ${amount} Pi`);
-            await fetch("/api/pi/complete", {
+            await fetch("https://tamco-app.vercel.app/api/pi/complete", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId: id, txid }),
