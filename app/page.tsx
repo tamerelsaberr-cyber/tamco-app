@@ -1,71 +1,58 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Page() {
   const [status, setStatus] = useState("");
 
+  useEffect(() => {
+    const Pi = (window as any).Pi;
+    if (Pi) {
+      Pi.init({ version: "2.0", sandbox: true });
+    }
+  }, []);
+
   const handlePay = async () => {
     try {
       const Pi = (window as any).Pi;
-  
-if (!Pi) {
-  setStatus("❌ افتح من Pi Browser");
-  return;
-}
-Pi.init({ version: "2.0", sandbox: true });
+      if (!Pi) {
+        setStatus("❌ افتح من Pi Browser");
+        return;
+      }
 
-      await Pi.authenticate(["username", "payments"], (p: any) => {
-        console.log("Incomplete payment:", p);
+      const auth = await Pi.authenticate(["username", "payments"], (p: any) => {
+        console.log(p);
       });
+
+      setStatus(`✅ اهلا ${auth.user.username}`);
 
       const isOwner = window.confirm("هل انت صاحب المتجر؟");
       const amount = isOwner ? 0.005 : 10;
 
-      setStatus(`جاري دفع ${amount} Pi...`);
-
-      await Pi.createPayment(
-        {
-          amount: amount,
-          memo: "TAMCO Product",
-          metadata: { price: amount },
+      await Pi.createPayment({
+        amount: amount,
+        memo: "Tamco Product",
+        metadata: { productId: "1" },
+      }, {
+        onReadyForServerApproval: (id: string) => {
+          setStatus("جاري الموافقة... " + id);
         },
-        {
-          onReadyForServerApproval: async (id: string) => {
-            setStatus(`✅ تمت الموافقة على ${id}`);
-            await fetch("https://tamco-app.vercel.app/api/pi/approve", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId: id }),
-            });
-          },
-          onReadyForServerCompletion: async (id: string, txid: string) => {
-            setStatus(`✅ تم الدفع بنجاح ${amount} Pi`);
-            await fetch("https://tamco-app.vercel.app/api/pi/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId: id, txid }),
-            });
-            setTimeout(() => {
-              window.location.href = "/admin";
-            }, 1000);
-          },
-          onCancel: () => setStatus("❌ تم إلغاء الدفع"),
-          onError: (e: any) => {
-            console.error(e);
-            setStatus(`❌ خطأ: ${e.message}`);
-          },
-        }
-      );
+        onReadyForServerCompletion: (id: string, txid: string) => {
+          setStatus("✅ تم الدفع بنجاح");
+        },
+        onCancel: () => setStatus("تم الالغاء"),
+        onError: (e: any) => setStatus("خطأ: " + e.message),
+      });
+
     } catch (e: any) {
-      setStatus(`❌ خطأ: ${e.message}`);
+      setStatus("Error: " + e.message);
     }
   };
 
   return (
-    <div style={{ textAlign: "center", padding: 60 }}>
-      <h2>TAMCO Product</h2>
+    <div style={{ padding: 30, textAlign: "center" }}>
+      <h1>TAMCO Product</h1>
       <p>Owner: 0.005 / Customer: 10 Pi</p>
-      <button onClick={handlePay} style={{ background: "#6c4cff", color: "white", padding: "12px 24px", borderRadius: 8, border: "none", cursor: "pointer" }}>
+      <button onClick={handlePay} style={{ padding: "10px 20px", background: "#3b82f6", color: "white", border: "none", borderRadius: 8 }}>
         Pay with Pi
       </button>
       <p>{status}</p>
