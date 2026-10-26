@@ -7,10 +7,12 @@ export default function Page() {
   const handlePay = async () => {
     try {
       const Pi = (window as any).Pi;
-      if (!Pi) {
-        setStatus("❌ افتح من Pi Browser");
-        return;
-      }
+  
+if (!Pi) {
+  setStatus("❌ افتح من Pi Browser");
+  return;
+}
+Pi.init({ version: "2.0", sandbox: true });
 
       await Pi.authenticate(["username", "payments"], (p: any) => {
         console.log("Incomplete payment:", p);
