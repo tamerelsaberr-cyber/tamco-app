@@ -1,60 +1,121 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+declare global {
+  interface Window {
+    Pi: any;
+  }
+}
 
 export default function Page() {
-  const [status, setStatus] = useState("");
+  const [piUser, setPiUser] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handlePay = async () => {
-    try {
-      // @ts-ignore
-      const Pi = window.Pi;
-      if (!Pi) {
-        setStatus("افتح في Pi Browser");
-        return;
+  // 1. تهيئة الـ SDK
+  useEffect(() => {
+    const initPi = async () => {
+      if (typeof window !== "undefined" && window.Pi) {
+        try {
+          await window.Pi.init({ version: "2.0", sandbox: true });
+          console.log("Pi SDK Initialized");
+        } catch (e) {
+          console.error("Pi init failed", e);
+        }
       }
-      const auth = await Pi.authenticate(["username", "payments"], () => {});
-      const isOwner = auth.user.username === "Helal_90";
-      const amount = isOwner ? 0.005 : 10;
-      setStatus("جاري فتح الدفع...");
-      // @ts-ignore
-      await Pi.createPayment({
-        amount: amount,
-        memo: "TAMCO Product",
-        metadata: { productId: "1" },
-      }, {
-        onReadyForServerApproval: async (id: string) => {
-          setStatus("⏳ جاري الموافقة... " + id);
-          await fetch("/api/pi/approve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId: id }),
-          });
-        },
-        onReadyForServerCompletion: async (id: string, txid: string) => {
-          setStatus("جاري التأكيد...");
-          await fetch("/api/pi/complete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId: id, txid: txid }),
-          });
-          setStatus("✅ تم الدفع بنجاح");
-        },
-        onCancel: (id: string) => { setStatus("تم الالغاء " + id); },
-        onError: (e: any) => { setStatus("خطأ: " + e.message); },
-      });
+    };
+    // نستنى ثانية لحد ما Pi script يحمل
+    const timer = setTimeout(initPi, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleAuth = async () => {
+    try {
+      const Pi = window.Pi;
+      if (!Pi) throw new Error("Pi SDK not found");
+      const scopes = ["username", "payments"];
+      const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+      setPiUser(auth.user);
     } catch (e: any) {
-      setStatus("Error: " + e.message);
+      setError(e.message);
     }
   };
 
+  const onIncompletePaymentFound = (payment: any) => {
+    console.log("incomplete payment found", payment);
+  };
+
+  const handlePay = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const Pi = window.Pi;
+      if (!Pi) throw new Error("Pi SDK not loaded");
+
+      // اتأكد انه اتعمله init
+      try {
+        await Pi.init({ version: "2.0", sandbox: true });
+      } catch {}
+
+      const username = piUser?.username || "guest";
+      const isOwner = username.toLowerCase().includes("helal");
+      const amount = isOwner ? 0.005 : 10;
+
+      await Pi.createPayment(
+        {
+          amount: amount,
+          memo: "TAMCO Product",
+          metadata: { username },
+        },
+        {
+          onReadyForServerApproval: async (paymentId: string) => {
+            await fetch("/api/pi/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId }),
+            });
+          },
+          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+            const res = await fetch("/api/pi/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid }),
+            });
+            if (res.ok) {
+              alert("Payment Successful! ✅");
+            }
+          },
+          onCancel: () => {
+            setError("Payment Cancelled");
+            setLoading(false);
+          },
+          onError: (err: any) => {
+            setError("Payment Error: " + err.message);
+            setLoading(false);
+          },
+        }
+      );
+    } catch (e: any) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
   return (
-    <div style={{ padding: 30, textAlign: "center" }}>
+    <div style={{ padding: "50px", textAlign: "center", fontFamily: "serif" }}>
       <h1>TAMCO Product</h1>
       <p>Owner: 0.005 / Customer: 10 Pi</p>
-      <button onClick={handlePay} style={{ padding: "10px 20px", fontSize: 18 }}>
-        Pay with Pi
-      </button>
-      <p>{status}</p>
+      {!piUser ? (
+        <button onClick={handleAuth} style={{ padding: "10px 20px" }}>
+          Login with Pi
+        </button>
+      ) : (
+        <button onClick={handlePay} style={{ padding: "10px 20px" }}>
+          Pay with Pi
+        </button>
+      )}
+      {error && <p style={{ color: "red", marginTop: "20px" }}>Error: {error}</p>}
+      {loading && <p>Loading...</p>}
     </div>
   );
 }
