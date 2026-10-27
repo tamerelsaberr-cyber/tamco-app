@@ -1,121 +1,80 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
-declare global {
-  interface Window {
-    Pi: any;
-  }
-}
+declare global { interface Window { Pi: any } }
 
-export default function Page() {
-  const [piUser, setPiUser] = useState<any>(null);
-  const [error, setError] = useState("");
+export default function Home() {
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. تهيئة الـ SDK
   useEffect(() => {
-    const initPi = async () => {
-      if (typeof window !== "undefined" && window.Pi) {
-        try {
-          await window.Pi.init({ version: "2.0", sandbox: true });
-          console.log("Pi SDK Initialized");
-        } catch (e) {
-          console.error("Pi init failed", e);
-        }
-      }
-    };
-    // نستنى ثانية لحد ما Pi script يحمل
-    const timer = setTimeout(initPi, 1000);
-    return () => clearTimeout(timer);
+    const script = document.createElement("script");
+    script.src = "https://sdk.minepi.com/pi-sdk.js";
+    script.onload = () => { window.Pi.init({ version: "2.0", sandbox: true }); };
+    document.body.appendChild(script);
   }, []);
 
-  const handleAuth = async () => {
+  const login = async () => {
     try {
-      const Pi = window.Pi;
-      if (!Pi) throw new Error("Pi SDK not found");
       const scopes = ["username", "payments"];
-      const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
-      setPiUser(auth.user);
-    } catch (e: any) {
-      setError(e.message);
-    }
+      const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
+      setUser(auth.user);
+    } catch (e) { alert("Login failed"); }
   };
 
   const onIncompletePaymentFound = (payment: any) => {
-    console.log("incomplete payment found", payment);
+    console.log("incomplete", payment);
+    return fetch("/api/pi/complete", {
+      method: "POST",
+      body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid }),
+      headers: { "Content-Type": "application/json" }
+    });
   };
 
-  const handlePay = async () => {
-    setError("");
+  const pay = async () => {
     setLoading(true);
     try {
-      const Pi = window.Pi;
-      if (!Pi) throw new Error("Pi SDK not loaded");
-
-      // اتأكد انه اتعمله init
-      try {
-        await Pi.init({ version: "2.0", sandbox: true });
-      } catch {}
-
-      const username = piUser?.username || "guest";
-      const isOwner = username.toLowerCase().includes("helal");
-      const amount = isOwner ? 0.005 : 10;
-
-      await Pi.createPayment(
-        {
-          amount: amount,
-          memo: "TAMCO Product",
-          metadata: { username },
+      await window.Pi.createPayment({
+        amount: 1, // 1 Pi زي ما كنت عايز
+        memo: "TAMCO Product",
+        metadata: { productId: "tamco-1" }
+      }, {
+        onReadyForServerApproval: (paymentId: string) => {
+          fetch("/api/pi/approve", {
+            method: "POST",
+            body: JSON.stringify({ paymentId }),
+            headers: { "Content-Type": "application/json" }
+          });
         },
-        {
-          onReadyForServerApproval: async (paymentId: string) => {
-            await fetch("/api/pi/approve", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId }),
-            });
-          },
-          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-            const res = await fetch("/api/pi/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId, txid }),
-            });
-            if (res.ok) {
-              alert("Payment Successful! ✅");
-            }
-          },
-          onCancel: () => {
-            setError("Payment Cancelled");
+        onReadyForServerCompletion: (paymentId: string, txid: string) => {
+          fetch("/api/pi/complete", {
+            method: "POST",
+            body: JSON.stringify({ paymentId, txid }),
+            headers: { "Content-Type": "application/json" }
+          }).then(() => {
             setLoading(false);
-          },
-          onError: (err: any) => {
-            setError("Payment Error: " + err.message);
-            setLoading(false);
-          },
-        }
-      );
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setLoading(false);
+            alert("تم الدفع بنجاح! 1 Pi");
+          });
+        },
+        onCancel: () => { setLoading(false); },
+        onError: (err: any) => { setLoading(false); console.log(err); alert("فشل الدفع"); }
+      });
+    } catch (e) { setLoading(false); }
   };
 
   return (
-    <div style={{ padding: "50px", textAlign: "center", fontFamily: "serif" }}>
+    <div style={{ textAlign: "center", marginTop: "100px" }}>
       <h1>TAMCO Product</h1>
-      <p>Owner: 0.005 / Customer: 10 Pi</p>
-      {!piUser ? (
-        <button onClick={handleAuth} style={{ padding: "10px 20px" }}>
-          Login with Pi
-        </button>
+      {!user ? (
+        <button onClick={login} style={{ padding: "15px 30px" }}>Login with Pi</button>
       ) : (
-        <button onClick={handlePay} style={{ padding: "10px 20px" }}>
-          Pay with Pi
-        </button>
+        <>
+          <p>أهلا {user.username}</p>
+          <button onClick={pay} style={{ padding: "15px 30px", background: "purple", color: "white" }}>
+            {loading ? "جاري..." : "Pay 1 Pi"}
+          </button>
+        </>
       )}
-      {error && <p style={{ color: "red", marginTop: "20px" }}>Error: {error}</p>}
-      {loading && <p>Loading...</p>}
     </div>
   );
 }
