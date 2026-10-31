@@ -1,10 +1,6 @@
-
-import Script from 'next/script';
-
-export const metadata = {
-  title: 'Tamco Marketplace',
-  description: 'Pi Network Application',
-};
+import React from "react";
+import Script from "next/script";
+import "./globals.css";
 
 export default function RootLayout({
   children,
@@ -12,15 +8,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl">
-      <head>
-        <Script 
-          src="https://sdk.minepi.com/pi-sdk.js" 
-          strategy="beforeInteractive" 
-        />
-      </head>
+    <html lang="en">
       <body>
         {children}
+        {/* Pi SDK */}
+        <Script src="https://minepi.com" strategy="afterInteractive" />
       </body>
     </html>
   );
