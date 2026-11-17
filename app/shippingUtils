@@ -1,0 +1,30 @@
+export const updateShippingStatusLogic = (contractLedger, contractId, action, config) => {
+    const { prePackagingImage, postPackagingImage, shippingMethod, returnShippingCost } = config;
+
+    return contractLedger.map(contract => {
+        if (contract.id === contractId) {
+            if (action === 'pack') {
+                if (!prePackagingImage || !postPackagingImage) {
+                    alert('برجاء رفع الفحص البصري الفعلي (قبل وبعد التغليف) لحفظ الحقوق وضمان عدم وجود التلفيات!');
+                    return contract;
+                }
+                return {
+                    ...contract,
+                    status: 'تم التغليف والتحميل وجاري الشحن والتوصيل للعميل',
+                    prePackagingImage,
+                    postPackagingImage,
+                    shippingMethod,
+                    returnShippingCost: parseFloat(returnShippingCost || 0)
+                };
+            }
+            
+            if (action === 'approve') {
+                return {
+                    ...contract,
+                    status: 'تم التسليم النهائي للعميل قانونياً وغلقت المعاملة (L)'
+                };
+            }
+        }
+        return contract;
+    });
+};
