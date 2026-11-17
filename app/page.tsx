@@ -43,6 +43,18 @@ export default function TamcoUnifiedApp() {
       } catch {}
     }
     if (localStorage.getItem("tamco_3d_pro") === "true") setIsPro(true);
+
+    const initPi = () => {
+      const piSDK = (window as any).Pi;
+      if (piSDK && typeof piSDK.init === "function") {
+        try {
+          piSDK.init({ version: "2.0", sandbox: true });
+        } catch {}
+      }
+    };
+    initPi();
+    const timer = setTimeout(initPi, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubscribe = async () => {
