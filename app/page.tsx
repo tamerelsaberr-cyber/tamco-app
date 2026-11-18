@@ -60,28 +60,77 @@ export default function TamcoUnifiedApp() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSubscribe = async () => {
-    setMsg("Connecting to Pi Wallet...");
+  // دالة مساعدة لمعالجة الدفع عبر شبكة باي
+  const executePiPayment = async (
+    amount: number,
+    memo: string,
+    metadata: Record<string, any>,
+    onSuccess: (txid: string) => void
+  ) => {
+    setMsg("جاري الاتصال بمحفظة باي...");
     try {
       const piSDK = (window as any).Pi;
       if (!piSDK) {
-        setMsg("Open inside Pi Browser to activate subscription.");
+        setMsg("يرجى فتح التطبيق من داخل متصفح باي (Pi Browser).");
         return;
       }
-      await piSDK.authenticate(["payments"], () => {});
-      const res = await piSDK.createSubscription({
-        serviceId: 363,
-        memo: "TAMCO 3D Studio Monthly Plan",
-        metadata: { plan: "monthly", serviceId: "363" },
+
+      // تهيئة الحزمة وتسجيل الدخول مع معالجة أي دفعة معلقة
+      piSDK.init({ version: "2.0", sandbox: true });
+      await piSDK.authenticate(["username", "payments"], async (incomplete: any) => {
+        if (incomplete?.identifier) {
+          await fetch("/api/pi/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentId: incomplete.identifier,
+              txid: incomplete.transaction?.txid || "",
+            }),
+          });
+        }
       });
-      if (res && res.status === "active") {
+
+      // إنشاء الدفعة الرسمية
+      piSDK.createPayment(
+        { amount, memo, metadata },
+        {
+          onReadyForServerApproval: async (paymentId: string) => {
+            setMsg("جاري اعتماد المعاملة من السيرفر...");
+            await fetch("/api/pi/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId }),
+            });
+          },
+          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+            await fetch("/api/pi/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid }),
+            });
+            onSuccess(txid);
+          },
+          onCancel: () => setMsg("تم إلغاء عملية الدفع."),
+          onError: (err: any) => setMsg("خطأ في الدفع: " + (err?.message || "تعذر الإتمام")),
+        }
+      );
+    } catch (err: any) {
+      setMsg("تعذر الاتصال بشبكة باي: " + (err?.message || "تأكد من الصلاحيات"));
+    }
+  };
+
+  // 1. تفعيل اشتراك 3D Pro (البديل الصحيح لـ createSubscription)
+  const handleSubscribe = async () => {
+    await executePiPayment(
+      5, // قيمة الاشتراك بعملة Pi
+      "TAMCO 3D Studio Monthly Plan",
+      { plan: "monthly", serviceId: "363" },
+      (txid) => {
         localStorage.setItem("tamco_3d_pro", "true");
         setIsPro(true);
-        setMsg("3D Pro Monthly Subscription Activated!");
+        setMsg(`تم تفعيل اشتراك 3D Pro بنجاح! (${txid.slice(0, 8)}...)`);
       }
-    } catch {
-      setMsg("Subscription cancelled or unavailable.");
-    }
+    );
   };
 
   const sendToContract = () => {
@@ -91,25 +140,39 @@ export default function TamcoUnifiedApp() {
     setMsg("3D specs transferred to contract.");
   };
 
-  const createOrder = (e: React.FormEvent) => {
+  const createOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !dims) return;
-    const newOrd: OrderTrackingItem = {
-      id: `TMC-${Math.floor(100 + Math.random() * 900)}`,
-      title,
-      woodType: wood,
-      dimensions: dims,
-      finishing: color,
-      paymentPlan: payMode,
-      currentStage: 1,
-      trackingNumber: `TRK-${Math.floor(100000 + Math.random() * 900000)}-PI`,
-    };
-    setOrders([newOrd, ...orders]);
-    setTitle("");
-    setDims("");
-    setTab("tracking");
-    setMsg("Smart Contract created.");
+
+    const selectedProduct = products.find((p) => p.name === title);
+    const totalPrice = selectedProduct ? Number(selectedProduct.price) || 10 : 10;
+    const isSplit = payMode.includes("50%");
+    const amountToPay = isSplit ? Number((totalPrice * 0.5).toFixed(4)) : totalPrice;
+
+    await executePiPayment(
+      amountToPay,
+      `Tamco Contract: ${title} (${isSplit ? "50% Deposit" : "Full Payment"})`,
+      { title, dims, wood, color, payMode },
+      (txid) => {
+        const newOrd: OrderTrackingItem = {
+          id: `TMC-${Math.floor(100 + Math.random() * 900)}`,
+          title,
+          woodType: wood,
+          dimensions: dims,
+          finishing: color,
+          paymentPlan: payMode,
+          currentStage: 1,
+          trackingNumber: `TRK-${txid.slice(0, 8).toUpperCase()}`,
+        };
+        setOrders([newOrd, ...orders]);
+        setTitle("");
+        setDims("");
+        setTab("tracking");
+        setMsg("Smart Contract and payment verified successfully!");
+      }
+    );
   };
+
 
   const inp = { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d5c7be" };
   const btn = { backgroundColor: "#5c3d2e", color: "#fff", border: "none", padding: "12px 18px", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" };
