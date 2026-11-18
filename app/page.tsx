@@ -24,17 +24,18 @@ export default function TamcoUnifiedApp() {
   const [w, setW] = useState("200");
   const [h, setH] = useState("90");
   const [d, setD] = useState("85");
-  const [wood, setWood] = useState("Solid Beech");
-  const [color, setColor] = useState("Warm Walnut");
+  const [wood, setWood] = useState("\u062e\u0634\u0628 \u0632\u0627\u0646 \u0637\u0628\u064a\u0639\u064a");
+  const [color, setColor] = useState("\u062c\u0648\u0632 \u062f\u0627\u0641\u0626 \u0645\u0637");
 
   const [title, setTitle] = useState("");
   const [dims, setDims] = useState("");
-  const [payMode, setPayMode] = useState("50% Split Payment");
+  const [payMode, setPayMode] = useState("\u062f\u0641\u0639 50% \u0645\u0642\u062f\u0645 \u0648 50% \u0639\u0646\u062f \u0627\u0644\u0634\u062d\u0646");
 
   const [pName, setPName] = useState("");
-  const [pType, setPType] = useState("Manufacturing Workshop");
+  const [pType, setPType] = useState("\u0648\u0631\u0634\u0629 \u062a\u0635\u0646\u064a\u0639 \u0623\u062b\u0627\u062b");
   const [pSpec, setPSpec] = useState("");
   const [pDone, setPDone] = useState(false);
+  
 
   useEffect(() => {
     const saved = localStorage.getItem("tamco-products");

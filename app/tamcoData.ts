@@ -18,38 +18,53 @@ export interface OrderTrackingItem {
 }
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
-  { id: 1, name: "Modern Complete Bedroom Suite", price: "45.00 Pi", category: "Bedroom" },
-  { id: 2, name: "Classic Beech Wood Salon Set", price: "30.00 Pi", category: "Living Room" },
-  { id: 3, name: "Dining Table with 6 Chairs", price: "22.00 Pi", category: "Dining" },
+  {
+    id: 1,
+    name: "\u063a\u0631\u0641\u0629 \u0646\u0648\u0645 \u0645\u0648\u062f\u0631\u0646 \u0643\u0627\u0645\u0644\u0629",
+    price: "45.00 Pi",
+    category: "\u063a\u0631\u0641 \u0646\u0648\u0645",
+  },
+  {
+    id: 2,
+    name: "\u0637\u0642\u0645 \u0635\u0627\u0644\u0648\u0646 \u062e\u0634\u0628 \u0632\u0627\u0646 \u0643\u0644\u0627\u0633\u064a\u0643",
+    price: "30.00 Pi",
+    category: "\u0635\u0627\u0644\u0648\u0646\u0627\u062a \u0648\u0623\u0646\u062a\u0631\u064a\u0647",
+  },
+  {
+    id: 3,
+    name: "\u0633\u0641\u0631\u0629 \u0637\u0639\u0627\u0645 6 \u0643\u0631\u0627\u0633\u064a \u0641\u0627\u062e\u0631\u0629",
+    price: "22.00 Pi",
+    category: "\u063a\u0631\u0641 \u0633\u0641\u0631\u0629",
+  },
 ];
 
 export const TRACKING_STAGES: string[] = [
-  "1. Contract & Specs Approved",
-  "2. Carpentry & Frame Assembly",
-  "3. Painting & Surface Finishing",
-  "4. Protective Packaging",
-  "5. In Transit & Shipping",
-  "6. Delivered & Installed",
+  "1. \u0627\u0639\u062a\u0645\u0627\u062f \u0627\u0644\u0639\u0642\u062f \u0648\u0627\u0644\u0645\u0648\u0627\u0635\u0641\u0627\u062a",
+  "2. \u0627\u0644\u0646\u062c\u0627\u0631\u0629 \u0648\u062a\u062c\u0645\u064a\u0639 \u0627\u0644\u0647\u064a\u0643\u0644",
+  "3. \u0627\u0644\u062f\u0647\u0627\u0646 \u0648\u0627\u0644\u062a\u0634\u0637\u064a\u0628 \u0627\u0644\u0646\u0647\u0627\u0626\u064a",
+  "4. \u0627\u0644\u062a\u063a\u0644\u064a\u0641 \u0627\u0644\u0622\u0645\u0646 \u0644\u0644\u0634\u062d\u0646",
+  "5. \u062c\u0627\u0631\u064a \u0627\u0644\u0634\u062d\u0646 \u0648\u0627\u0644\u062a\u0648\u0635\u064a\u0644",
+  "6. \u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u0648\u0627\u0644\u062a\u0631\u0643\u064a\u0628",
 ];
 
 export const INITIAL_ORDERS: OrderTrackingItem[] = [
   {
     id: "TMC-101",
-    title: "Modern American Sofa Set",
-    woodType: "Solid Beech Wood",
-    dimensions: "240cm x 95cm x 85cm",
-    finishing: "Matte Walnut & Linen",
-    paymentPlan: "50% Split Payment (Stage 1 Paid)",
+    title: "\u0637\u0642\u0645 \u0643\u0646\u0628 \u0623\u0645\u0631\u064a\u0643\u064a \u0645\u0648\u062f\u0631\u0646",
+    woodType: "\u062e\u0634\u0628 \u0632\u0627\u0646 \u0623\u062d\u0645\u0631",
+    dimensions: "240 \u0633\u0645 \u00d7 95 \u0633\u0645 \u00d7 85 \u0633\u0645",
+    finishing: "\u062c\u0648\u0632 \u0645\u0637 \u0648\u0642\u0645\u0627\u0634 \u0643\u062a\u0627\u0646",
+    paymentPlan: "\u062f\u0641\u0639 50% \u0645\u0642\u062f\u0645 (\u062a\u0645 \u0627\u0644\u0633\u062f\u0627\u062f)",
     currentStage: 2,
     trackingNumber: "TRK-884920-PI",
   },
   {
     id: "TMC-102",
-    title: "Sliding Door Wardrobe",
-    woodType: "Oak Veneer & MDF",
-    dimensions: "260cm x 220cm x 65cm",
-    finishing: "Natural Satin Oak",
-    paymentPlan: "Full Payment Completed",
+    title: "\u062f\u0648\u0644\u0627\u0628 \u0645\u0644\u0627\u0628\u0633 \u062c\u0631\u0627\u0631",
+    woodType: "\u0642\u0634\u0631\u0629 \u0623\u0631\u0648 \u0637\u0628\u064a\u0639\u064a",
+    dimensions: "260 \u0633\u0645 \u00d7 220 \u0633\u0645 \u00d7 65 \u0633\u0645",
+    finishing: "\u0633\u0627\u062a\u0627\u0646 \u0637\u0628\u064a\u0639\u064a",
+    paymentPlan: "\u062f\u0641\u0639 \u0643\u0627\u0645\u0644 \u0645\u0643\u062a\u0645\u0644",
     currentStage: 4,
     trackingNumber: "TRK-884955-PI",
   },
